@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: pdf-coordinates-finder
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PORT
+        value: 5000
