@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: pdf-coordinates-finder
+    name: PythonProject12
     env: docker
     dockerfilePath: ./Dockerfile
     envVars:
