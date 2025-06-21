@@ -1,30 +1,17 @@
-from flask import Flask, render_template, request, jsonify, send_file
-import io
-import os
-from werkzeug.utils import secure_filename
-import tempfile
-import json
-import logging
-import base64
-from PIL import Image, ImageDraw, ImageFont
+from flask import Flask, request, jsonify, render_template, send_file
 import pdfplumber
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from PIL import Image, ImageDraw
+import io
+import base64
+import tempfile
+from werkzeug.utils import secure_filename
+import uuid
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Ensure upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# Global variables
-current_pdf = None
-current_filename = None
-current_filepath = None
+# Store PDF objects in memory
+pdf_storage = {}
 
 
 @app.route('/')
@@ -32,441 +19,223 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/health')
-def health_check():
-    """Health check endpoint for Render"""
-    return jsonify({'status': 'healthy', 'message': 'PDF Coordinates Finder with pdfplumber is running'})
-
-
 @app.route('/upload_pdf', methods=['POST'])
 def upload_pdf():
-    global current_pdf, current_filename, current_filepath
-
     try:
-        logger.info("Received PDF upload request")
-
         if 'pdf_file' not in request.files:
-            return jsonify({'error': 'No file uploaded'}), 400
+            return jsonify({'success': False, 'error': 'No file uploaded'})
 
         file = request.files['pdf_file']
         if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
+            return jsonify({'success': False, 'error': 'No file selected'})
 
-        if file and file.filename.lower().endswith('.pdf'):
-            # Save file temporarily
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'success': False, 'error': 'File must be a PDF'})
 
-            logger.info(f"Saved PDF file: {filepath}")
+        # Save file temporarily
+        filename = str(uuid.uuid4()) + '.pdf'
+        file_path = f"/tmp/{filename}"
+        file.save(file_path)
 
-            # Open PDF with pdfplumber
-            current_pdf = pdfplumber.open(filepath)
-            current_filename = filename
-            current_filepath = filepath
-            page_count = len(current_pdf.pages)
+        # Open with pdfplumber
+        pdf = pdfplumber.open(file_path)
+        page_count = len(pdf.pages)
 
-            logger.info(f"Successfully opened PDF with {page_count} pages using pdfplumber")
+        # Store PDF object
+        pdf_storage[filename] = {
+            'pdf': pdf,
+            'file_path': file_path,
+            'page_count': page_count
+        }
 
-            return jsonify({
-                'success': True,
-                'filename': filename,
-                'page_count': page_count,
-                'library': 'pdfplumber'
-            })
-        else:
-            return jsonify({'error': 'Please upload a valid PDF file'}), 400
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'page_count': page_count,
+            'library': 'pdfplumber'
+        })
 
     except Exception as e:
-        logger.error(f"Error uploading PDF: {str(e)}")
-        return jsonify({'error': f'Failed to upload PDF: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/get_page/<int:page_num>')
 def get_page(page_num):
     try:
-        if not current_pdf:
-            return jsonify({'error': 'No PDF loaded'}), 400
+        # Get PDF filename from request args or use the most recent one
+        filename = request.args.get('filename')
+        if not filename:
+            # Use the most recent PDF if no filename specified
+            if not pdf_storage:
+                return jsonify({'success': False, 'error': 'No PDF loaded'})
+            filename = list(pdf_storage.keys())[-1]
 
-        if page_num < 1 or page_num > len(current_pdf.pages):
-            return jsonify({'error': 'Invalid page number'}), 400
+        if filename not in pdf_storage:
+            return jsonify({'success': False, 'error': 'PDF not found'})
 
-        # Get page (pdfplumber uses 0-based indexing)
-        page = current_pdf.pages[page_num - 1]
+        pdf_data = pdf_storage[filename]
+        pdf = pdf_data['pdf']
 
-        # Get page dimensions
-        width = float(page.width)
-        height = float(page.height)
+        if page_num < 1 or page_num > len(pdf.pages):
+            return jsonify({'success': False, 'error': 'Invalid page number'})
 
-        # Create a visual representation of the page
-        scale = request.args.get('scale', 0.8, type=float)
-        img_width = int(width * scale)
-        img_height = int(height * scale)
+        page = pdf.pages[page_num - 1]
 
-        # Create an image with page outline and content indication
-        img = Image.new('RGB', (img_width, img_height), 'white')
-        draw = ImageDraw.Draw(img)
+        # Convert PDF page to image using pdfplumber's built-in method
+        scale = float(request.args.get('scale', 1.0))
 
-        # Page border
-        draw.rectangle([0, 0, img_width - 1, img_height - 1], outline='black', width=2)
-
-        # Extract and display text content with positioning
-        try:
-            # Get text with bounding boxes
-            chars = page.chars
-            words = page.extract_words()
-
-            # Draw words on the image to show text layout
-            for word in words[:100]:  # Limit to first 100 words for performance
-                x0 = word['x0'] * scale
-                y0 = word['top'] * scale
-                x1 = word['x1'] * scale
-                y1 = word['bottom'] * scale
-
-                # Draw word bounding box
-                draw.rectangle([x0, y0, x1, y1], outline='lightblue', width=1)
-
-                # Draw text if it fits
-                if y1 - y0 > 8:  # Only draw if rectangle is big enough
-                    try:
-                        # Truncate long words
-                        display_text = word['text'][:20] + "..." if len(word['text']) > 20 else word['text']
-                        draw.text((x0 + 2, y0 + 2), display_text, fill='darkblue',
-                                  font=None)  # Use default font
-                    except:
-                        pass  # Skip if text drawing fails
-
-        except Exception as e:
-            logger.warning(f"Error drawing text layout: {str(e)}")
-            draw.text((50, 50), f"PDF Page {page_num}", fill='black')
-            draw.text((50, 80), "pdfplumber - precise coordinate extraction", fill='blue')
-
-        # Add coordinate indicators and info
-        draw.text((10, img_height - 100), "Click and drag to select text area", fill='blue')
-        draw.text((10, img_height - 80), f"Page size: {int(width)} x {int(height)} pts", fill='gray')
-        draw.text((10, img_height - 60), f"File: {current_filename}", fill='gray')
-        draw.text((10, img_height - 40), "Using pdfplumber for precise coordinates", fill='green')
-        draw.text((10, img_height - 20), f"Words detected: {len(words) if 'words' in locals() else 0}", fill='gray')
+        # Create image from PDF page
+        img = page.to_image(resolution=150 * scale)
+        pil_img = img.original
 
         # Convert to base64
         img_buffer = io.BytesIO()
-        img.save(img_buffer, format='PNG')
-        img_data = img_buffer.getvalue()
-        img_base64 = base64.b64encode(img_data).decode()
+        pil_img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+
+        # Get word count for this page
+        words = page.extract_words()
+        word_count = len(words)
 
         return jsonify({
             'success': True,
             'image': f'data:image/png;base64,{img_base64}',
-            'width': width,
-            'height': height,
-            'scaled_width': width * scale,
-            'scaled_height': height * scale,
-            'word_count': len(words) if 'words' in locals() else 0
+            'width': pil_img.width,
+            'height': pil_img.height,
+            'scaled_width': pil_img.width,
+            'scaled_height': pil_img.height,
+            'word_count': word_count
         })
 
     except Exception as e:
-        logger.error(f"Error getting page: {str(e)}")
-        return jsonify({'error': f'Failed to get page: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/extract_text', methods=['POST'])
 def extract_text():
     try:
-        if not current_pdf:
-            return jsonify({'error': 'No PDF loaded'}), 400
-
         data = request.get_json()
         page_num = data.get('page_num', 1)
-        x1 = float(data.get('x1'))
-        y1 = float(data.get('y1'))
-        x2 = float(data.get('x2'))
-        y2 = float(data.get('y2'))
+        x1 = float(data.get('x1', 0))
+        y1 = float(data.get('y1', 0))
+        x2 = float(data.get('x2', 100))
+        y2 = float(data.get('y2', 100))
 
-        if page_num < 1 or page_num > len(current_pdf.pages):
-            return jsonify({'error': 'Invalid page number'}), 400
+        # Get the most recent PDF
+        if not pdf_storage:
+            return jsonify({'success': False, 'error': 'No PDF loaded'})
 
-        # Get page (pdfplumber uses 0-based indexing)
-        page = current_pdf.pages[page_num - 1]
+        filename = list(pdf_storage.keys())[-1]
+        pdf_data = pdf_storage[filename]
+        pdf = pdf_data['pdf']
 
-        # Ensure coordinates are in correct order (top-left to bottom-right)
-        x0 = min(x1, x2)
-        y0 = min(y1, y2)
-        x1_crop = max(x1, x2)
-        y1_crop = max(y1, y2)
+        if page_num < 1 or page_num > len(pdf.pages):
+            return jsonify({'success': False, 'error': 'Invalid page number'})
 
-        # Crop the page to the specified coordinates
-        bbox = (x0, y0, x1_crop, y1_crop)
-        cropped_page = page.crop(bbox)
+        page = pdf.pages[page_num - 1]
 
-        # Extract text from the cropped area
-        extracted_text = cropped_page.extract_text()
+        # Extract text from the specified coordinates
+        # pdfplumber uses (x1, y1, x2, y2) where y increases downward
+        cropped_page = page.crop((x1, y1, x2, y2))
+        text = cropped_page.extract_text()
 
-        # Get words with their precise coordinates within the crop area
+        # Count words
         words = cropped_page.extract_words()
-        word_list = []
-
-        for word in words:
-            word_info = {
-                'text': word['text'],
-                'x0': word['x0'] + x0,  # Adjust coordinates back to full page
-                'y0': word['top'] + y0,
-                'x1': word['x1'] + x0,
-                'y1': word['bottom'] + y0,
-                'font': word.get('fontname', 'Unknown'),
-                'size': word.get('size', 0)
-            }
-            word_list.append(word_info)
-
-        # Get characters for even more precise analysis
-        chars = cropped_page.chars
-        char_list = []
-
-        for char in chars[:100]:  # Limit to first 100 chars for performance
-            char_info = {
-                'text': char['text'],
-                'x0': char['x0'] + x0,
-                'y0': char['top'] + y0,
-                'x1': char['x1'] + x0,
-                'y1': char['bottom'] + y0,
-                'font': char.get('fontname', 'Unknown'),
-                'size': char.get('size', 0)
-            }
-            char_list.append(char_info)
-
-        # If no text found, provide helpful message
-        if not extracted_text or not extracted_text.strip():
-            extracted_text = f"No text found in selected area ({x0:.1f}, {y0:.1f}, {x1_crop:.1f}, {y1_crop:.1f})"
+        word_count = len(words)
 
         return jsonify({
             'success': True,
-            'text': extracted_text,
-            'coordinates': {
-                'x1': x0,
-                'y1': y0,
-                'x2': x1_crop,
-                'y2': y1_crop
-            },
-            'words': word_list,
-            'characters': char_list,
-            'word_count': len(word_list),
-            'char_count': len(char_list),
-            'bbox_used': bbox,
-            'library': 'pdfplumber'
+            'text': text or '',
+            'word_count': word_count,
+            'library': 'pdfplumber',
+            'coordinates': f'({x1}, {y1}, {x2}, {y2})'
         })
 
     except Exception as e:
-        logger.error(f"Error extracting text: {str(e)}")
-        return jsonify({'error': f'Failed to extract text: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/search_text', methods=['POST'])
 def search_text():
     try:
-        if not current_pdf:
-            return jsonify({'error': 'No PDF loaded'}), 400
-
         data = request.get_json()
-        search_term = data.get('search_term', '').strip()
         page_num = data.get('page_num', 1)
+        search_term = data.get('search_term', '').lower()
 
-        if not search_term:
-            return jsonify({'error': 'Please provide a search term'}), 400
+        if not pdf_storage:
+            return jsonify({'success': False, 'error': 'No PDF loaded'})
 
-        if page_num < 1 or page_num > len(current_pdf.pages):
-            return jsonify({'error': 'Invalid page number'}), 400
+        filename = list(pdf_storage.keys())[-1]
+        pdf_data = pdf_storage[filename]
+        pdf = pdf_data['pdf']
 
-        # Get page
-        page = current_pdf.pages[page_num - 1]
-
-        # Get all words with their coordinates
+        page = pdf.pages[page_num - 1]
         words = page.extract_words()
 
-        # Search for term in words
         results = []
-        search_lower = search_term.lower()
-
         for word in words:
-            if search_lower in word['text'].lower():
-                result = {
+            if search_term in word['text'].lower():
+                results.append({
+                    'text': word['text'],
                     'x1': word['x0'],
                     'y1': word['top'],
                     'x2': word['x1'],
-                    'y2': word['bottom'],
-                    'text': word['text'],
-                    'font': word.get('fontname', 'Unknown'),
-                    'size': word.get('size', 0),
-                    'exact_match': word['text'].lower() == search_lower,
-                    'partial_match': search_lower in word['text'].lower()
-                }
-                results.append(result)
-
-        # Also search for multi-word phrases
-        full_text = page.extract_text()
-        if search_term.lower() in full_text.lower():
-            # Find approximate positions for multi-word matches
-            text_lines = full_text.split('\n')
-            for i, line in enumerate(text_lines):
-                if search_lower in line.lower():
-                    # Estimate position based on line number
-                    y_estimate = (i / len(text_lines)) * page.height
-                    x_estimate = line.lower().find(search_lower) * 6  # Rough character width
-
-                    # Only add if we don't already have exact word matches
-                    exact_matches = [r for r in results if r['exact_match']]
-                    if not exact_matches:
-                        results.append({
-                            'x1': x_estimate,
-                            'y1': y_estimate,
-                            'x2': x_estimate + len(search_term) * 8,
-                            'y2': y_estimate + 15,
-                            'text': search_term,
-                            'context': line.strip(),
-                            'estimated': True
-                        })
+                    'y2': word['bottom']
+                })
 
         return jsonify({
             'success': True,
             'results': results,
-            'count': len(results),
-            'search_term': search_term,
-            'library': 'pdfplumber',
-            'note': 'Results include precise word-level coordinates from pdfplumber'
+            'count': len(results)
         })
 
     except Exception as e:
-        logger.error(f"Error searching text: {str(e)}")
-        return jsonify({'error': f'Failed to search text: {str(e)}'}), 500
-
-
-@app.route('/get_pdf_info')
-def get_pdf_info():
-    try:
-        if not current_pdf:
-            return jsonify({'error': 'No PDF loaded'}), 400
-
-        # Get PDF metadata
-        metadata = current_pdf.metadata
-
-        # Get detailed page information
-        page_info = []
-        for i, page in enumerate(current_pdf.pages):
-            page_data = {
-                'page_number': i + 1,
-                'width': page.width,
-                'height': page.height,
-                'rotation': getattr(page, 'rotation', 0),
-                'word_count': len(page.extract_words()),
-                'char_count': len(page.chars) if hasattr(page, 'chars') else 0
-            }
-            page_info.append(page_data)
-
-        return jsonify({
-            'success': True,
-            'filename': current_filename,
-            'page_count': len(current_pdf.pages),
-            'pages': page_info,
-            'metadata': {
-                'title': metadata.get('Title', 'Unknown'),
-                'author': metadata.get('Author', 'Unknown'),
-                'subject': metadata.get('Subject', 'Unknown'),
-                'creator': metadata.get('Creator', 'Unknown'),
-                'producer': metadata.get('Producer', 'Unknown'),
-                'creation_date': str(metadata.get('CreationDate', 'Unknown')),
-                'modification_date': str(metadata.get('ModDate', 'Unknown'))
-            },
-            'library': 'pdfplumber',
-            'features': [
-                'Precise coordinate extraction',
-                'Word-level positioning',
-                'Character-level analysis',
-                'Font information',
-                'Exact bounding boxes'
-            ]
-        })
-
-    except Exception as e:
-        logger.error(f"Error getting PDF info: {str(e)}")
-        return jsonify({'error': f'Failed to get PDF info: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/analyze_layout', methods=['POST'])
 def analyze_layout():
-    """Analyze page layout and return structural information"""
     try:
-        if not current_pdf:
-            return jsonify({'error': 'No PDF loaded'}), 400
-
         data = request.get_json()
         page_num = data.get('page_num', 1)
 
-        if page_num < 1 or page_num > len(current_pdf.pages):
-            return jsonify({'error': 'Invalid page number'}), 400
+        if not pdf_storage:
+            return jsonify({'success': False, 'error': 'No PDF loaded'})
 
-        page = current_pdf.pages[page_num - 1]
+        filename = list(pdf_storage.keys())[-1]
+        pdf_data = pdf_storage[filename]
+        pdf = pdf_data['pdf']
 
-        # Get layout elements
+        page = pdf.pages[page_num - 1]
+
+        # Extract different elements
         words = page.extract_words()
-        tables = page.extract_tables()
+        text_lines = page.extract_text_lines()
+        tables = page.find_tables()
 
-        # Analyze text structure
-        lines = []
-        current_line = []
-        current_y = None
-
-        for word in words:
-            word_y = word['top']
-
-            # Group words into lines based on Y coordinate
-            if current_y is None or abs(word_y - current_y) < 5:
-                current_line.append(word)
-                current_y = word_y
-            else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = [word]
-                current_y = word_y
-
-        if current_line:
-            lines.append(current_line)
-
-        # Process lines
-        line_info = []
-        for i, line in enumerate(lines):
-            line_text = ' '.join([w['text'] for w in line])
-            line_bbox = {
-                'x0': min([w['x0'] for w in line]),
-                'y0': min([w['top'] for w in line]),
-                'x1': max([w['x1'] for w in line]),
-                'y1': max([w['bottom'] for w in line])
-            }
-
-            line_info.append({
-                'line_number': i + 1,
-                'text': line_text,
-                'bbox': line_bbox,
-                'word_count': len(line),
-                'avg_font_size': sum([w.get('size', 0) for w in line]) / len(line) if line else 0
+        # Create summary
+        lines_info = []
+        for line in text_lines[:10]:  # First 10 lines
+            lines_info.append({
+                'text': line['text'][:100],  # First 100 chars
+                'x': round(line['x0'], 1),
+                'y': round(line['top'], 1)
             })
 
         return jsonify({
             'success': True,
             'page_number': page_num,
             'total_words': len(words),
-            'total_lines': len(lines),
+            'total_lines': len(text_lines),
             'total_tables': len(tables),
-            'lines': line_info[:50],  # Limit to first 50 lines
-            'tables_info': [{'row_count': len(table), 'col_count': len(table[0]) if table else 0}
-                            for table in tables],
-            'page_dimensions': {
-                'width': page.width,
-                'height': page.height
-            },
-            'library': 'pdfplumber'
+            'lines': lines_info,
+            'page_width': page.width,
+            'page_height': page.height
         })
 
     except Exception as e:
-        logger.error(f"Error analyzing layout: {str(e)}")
-        return jsonify({'error': f'Failed to analyze layout: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/export_coordinates', methods=['POST'])
@@ -475,79 +244,27 @@ def export_coordinates():
         data = request.get_json()
         coordinates = data.get('coordinates', [])
 
-        # Create a detailed text file with coordinates
-        output = "PDF Coordinates Export - pdfplumber Analysis\n"
-        output += "=" * 60 + "\n\n"
-        output += f"Generated using pdfplumber library\n"
-        output += f"PDF File: {current_filename or 'Unknown'}\n"
-        output += f"Total Coordinate Sets: {len(coordinates)}\n"
-        output += f"Library: pdfplumber (precise coordinate extraction)\n\n"
+        # Create export text
+        export_text = "PDF Coordinates Export\n"
+        export_text += "=" * 50 + "\n\n"
 
-        for i, coord in enumerate(coordinates, 1):
-            output += f"Coordinate Set {i}:\n"
-            output += f"  Page: {coord.get('page', 'Unknown')}\n"
-            output += f"  Bounding Box: ({coord.get('x1', 0):.2f}, {coord.get('y1', 0):.2f}, {coord.get('x2', 0):.2f}, {coord.get('y2', 0):.2f})\n"
-            output += f"  Width: {abs(coord.get('x2', 0) - coord.get('x1', 0)):.2f} pts\n"
-            output += f"  Height: {abs(coord.get('y2', 0) - coord.get('y1', 0)):.2f} pts\n"
-            output += f"  Text: {coord.get('text', 'No text extracted')}\n"
-
-            if coord.get('words'):
-                output += f"  Word Count: {len(coord.get('words', []))}\n"
-                output += f"  Words: {[w.get('text', '') for w in coord.get('words', [])]}\n"
-
-            if coord.get('font_info'):
-                output += f"  Font Info: {coord.get('font_info')}\n"
-
-            if coord.get('note'):
-                output += f"  Note: {coord.get('note')}\n"
-
-            output += "-" * 50 + "\n\n"
-
-        output += "\nExtraction Details:\n"
-        output += "- Coordinates are precise pixel-level positions from pdfplumber\n"
-        output += "- Bounding boxes represent exact text regions\n"
-        output += "- Font information includes name and size when available\n"
-        output += "- Word-level and character-level analysis supported\n"
+        for coord in coordinates:
+            export_text += f"Page: {coord.get('page', 1)}\n"
+            export_text += f"Coordinates: ({coord.get('x1', 0)}, {coord.get('y1', 0)}, {coord.get('x2', 0)}, {coord.get('y2', 0)})\n"
+            export_text += f"Text: {coord.get('text', 'No text')}\n"
+            export_text += "-" * 30 + "\n\n"
 
         # Create temporary file
-        temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', prefix='pdfplumber_coordinates_')
-        temp_file.write(output)
-        temp_file.close()
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+            f.write(export_text)
+            temp_path = f.name
 
-        return send_file(
-            temp_file.name,
-            as_attachment=True,
-            download_name=f'pdfplumber_coordinates_{current_filename or "export"}.txt',
-            mimetype='text/plain'
-        )
+        return send_file(temp_path, as_attachment=True, download_name='coordinates_export.txt')
 
     except Exception as e:
-        logger.error(f"Error exporting coordinates: {str(e)}")
-        return jsonify({'error': f'Failed to export coordinates: {str(e)}'}), 500
-
-
-@app.errorhandler(413)
-def too_large(e):
-    return jsonify({'error': 'File too large. Maximum size is 16MB.'}), 413
-
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    logger.error(f"Internal server error: {str(e)}")
-    return jsonify({'error': 'Internal server error'}), 500
-
-
-# Clean up function
-def cleanup_pdf():
-    global current_pdf
-    if current_pdf:
-        try:
-            current_pdf.close()
-        except:
-            pass
-        current_pdf = None
+        return jsonify({'success': False, 'error': str(e)})
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True)
