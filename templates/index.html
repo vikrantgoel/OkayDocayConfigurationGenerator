@@ -4,394 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OkayDocay - PDF Coordinates Finder</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #ffffff;
-            min-height: 100vh;
-            color: #333;
-        }
 
-        .container {
-            width: 100vw;
-            height: 100vh;
-            background: white;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-            color: white;
-            padding: 15px 30px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .header h1 {
-            font-size: 2rem;
-            margin-bottom: 5px;
-            font-weight: 400;
-        }
-
-        .header p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 350px;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .pdf-viewer {
-            padding: 20px;
-            border-right: 1px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .controls {
-            padding: 20px;
-            background: #f8fafc;
-            overflow-y: auto;
-        }
-
-        .upload-area {
-            border: 3px dashed #cbd5e0;
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .upload-area:hover {
-            border-color: #667eea;
-            background: #f7fafc;
-        }
-
-        .upload-area.dragover {
-            border-color: #667eea;
-            background: #ebf8ff;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .upload-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            transition: transform 0.2s ease;
-        }
-
-        .upload-button:hover {
-            transform: translateY(-2px);
-        }
-
-        .page-controls {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            flex-shrink: 0;
-        }
-
-        .btn {
-            padding: 6px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 13px;
-        }
-
-        .btn:hover {
-            background: #f3f4f6;
-        }
-
-        .btn.primary {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .btn.primary:hover {
-            background: #5a67d8;
-        }
-
-        .zoom-info {
-            background: #f0f9ff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            color: #0369a1;
-        }
-
-        .canvas-container {
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            overflow: auto;
-            background: #f8fafc;
-            position: relative;
-            flex: 1;
-        }
-
-        #pdf-canvas {
-            cursor: crosshair;
-            display: block;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
-        }
-
-        .coordinate-input {
-            margin-bottom: 15px;
-        }
-
-        .coordinate-input label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: #374151;
-            font-size: 13px;
-        }
-
-        .coordinate-input input {
-            width: 100%;
-            padding: 8px;
-            border: 2px solid #e5e7eb;
-            border-radius: 6px;
-            font-size: 13px;
-            transition: border-color 0.2s ease;
-        }
-
-        .coordinate-input input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .coord-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .extracted-text {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 12px;
-            max-height: 180px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
-        .info-panel {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 15px;
-        }
-
-        .info-panel h3 {
-            color: #0369a1;
-            margin-bottom: 6px;
-            font-size: 14px;
-        }
-
-        .info-panel p {
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
-        .search-box {
-            margin-bottom: 15px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 8px;
-            border: 2px solid #e5e7eb;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
-
-        .status {
-            padding: 8px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            font-weight: 500;
-            font-size: 12px;
-        }
-
-        .status.success {
-            background: #d1fae5;
-            color: #047857;
-            border: 1px solid #a7f3d0;
-        }
-
-        .status.error {
-            background: #fee2e2;
-            color: #dc2626;
-            border: 1px solid #fca5a5;
-        }
-
-        .status.info {
-            background: #dbeafe;
-            color: #1d4ed8;
-            border: 1px solid #93c5fd;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .highlight-box {
-            position: absolute;
-            border: 2px solid #f59e0b;
-            background: rgba(245, 158, 11, 0.2);
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .selection-box {
-            position: absolute;
-            border: 2px dashed #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .coordinate-debug {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            border-radius: 8px;
-            padding: 8px;
-            margin-bottom: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 10px;
-            line-height: 1.3;
-        }
-
-        .control-buttons {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .control-buttons .btn {
-            flex: 1;
-            min-width: 80px;
-            font-size: 12px;
-        }
-
-        .export-buttons {
-            display: flex;
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .export-buttons .btn {
-            flex: 1;
-            font-size: 12px;
-        }
-
-        @media (max-width: 1024px) {
-            .main-content {
-                grid-template-columns: 1fr;
-                grid-template-rows: 1fr auto;
-            }
-
-            .controls {
-                max-height: 300px;
-                border-top: 1px solid #e2e8f0;
-                border-right: none;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .coord-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 10px 15px;
-            }
-
-            .header h1 {
-                font-size: 1.3rem;
-            }
-
-            .pdf-viewer, .controls {
-                padding: 15px;
-            }
-
-            .page-controls {
-                gap: 8px;
-            }
-
-            .btn {
-                padding: 6px 10px;
-                font-size: 12px;
-            }
-        }
-    </style>
 </head>
 <body>
+
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div style="text-align: center;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loading-text">Processing...</div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>📄 OkayDocay</h1>
-            <p>Professional PDF coordinate extraction and text analysis</p>
+            <p>Professional PDF coordinate extraction and configuration maker</p>
+
+            <div class="step-indicator">
+                <div class="step" id="step-upload">
+                    <span>📁</span> Upload PDF
+                </div>
+                <div class="step" id="step-navigate">
+                    <span>🧭</span> Navigate
+                </div>
+                <div class="step" id="step-select">
+                    <span>🎯</span> Configure
+                </div>
+                <div class="step" id="step-extract">
+                    <span>📝</span> Extract
+                </div>
+            </div>
         </div>
 
         <div class="main-content">
             <div class="pdf-viewer">
                 <div class="upload-area" id="upload-area" onclick="document.getElementById('pdf-file').click()">
                     <input type="file" id="pdf-file" class="file-input" accept=".pdf">
-                    <div>
-                        <h3>📁 Upload PDF File</h3>
+                    <div class="upload-content">
+                        <div class="upload-icon">📁</div>
+                        <h3>Upload Your PDF File</h3>
                         <p>Click here or drag and drop your PDF file</p>
+                        <p style="margin: 10px 0; font-size: 13px; opacity: 0.7;">Supports files up to 100MB</p>
                         <button class="upload-button" type="button">Choose PDF File</button>
                     </div>
                 </div>
 
                 <div id="pdf-controls" class="hidden">
                     <div class="page-controls">
-                        <button class="btn" id="prev-page">← Prev</button>
+                        <button class="btn" id="prev-page" disabled>← Prev</button>
                         <span id="page-info">Page 1 of 1</span>
-                        <button class="btn" id="next-page">Next →</button>
+                        <button class="btn" id="next-page" disabled>Next →</button>
                         <button class="btn" id="zoom-out">Zoom Out</button>
                         <span class="zoom-info" id="zoom-info">100%</span>
                         <button class="btn" id="zoom-in">Zoom In</button>
@@ -404,56 +68,97 @@
                 </div>
             </div>
 
+
             <div class="controls">
                 <div id="status-area"></div>
 
-                <div class="info-panel">
-                    <h3>🎯 OkayDocay Features</h3>
-                    <p>• Full-screen PDF viewing<br>
-                    • Accurate coordinate mapping<br>
-                    • Precise text extraction<br>
-                    • Professional interface</p>
+
+
+                <!-- Config Maker Section -->
+                <div class="info-panel" id="config-section" style="display: none;">
+                    <h3>⚙️ Configuration Maker</h3>
+                    <p>Define field mappings by selection for automated extraction</p>
+                </div>
+
+                <div id="config-controls" class="hidden">
+                    <div class="coordinate-input">
+                        <label>📄 Target Page:</label>
+                        <select id="target-page" disabled>
+                            <option value="">Select page...</option>
+                        </select>
+                    </div>
+
+                    <div class="coord-grid">
+                        <div>
+                            <label>📝 Field Name:</label>
+                            <input type="text" id="field-name" placeholder="e.g., Customer Name, Invoice Number">
+                        </div>
+                        <div>
+                            <label>📍 Selected Coordinates:</label>
+                            <input type="text" id="current-coords" readonly placeholder="Select area on PDF first">
+                        </div>
+                    </div>
+
+                    <div class="validation-message hidden" id="field-validation">Please enter a field name</div>
+
+                    <div class="control-buttons">
+                        <button class="btn primary" id="add-field-btn" disabled>➕ Add Field</button>
+                        <button class="btn" id="preview-field-btn" disabled>👁️ Preview</button>
+                    </div>
+
+                    <div id="fields-list" class="extracted-text" style="max-height: 200px; font-family: inherit;">
+                        <div style="text-align: center; opacity: 0.7; font-style: italic;">
+                            No fields defined yet. Add fields using the button above.
+                        </div>
+                    </div>
+
+                    <div class="control-buttons" style="margin-top: 15px;">
+                        <button class="btn" id="clear-fields-btn" disabled>🗑️ Clear All</button>
+                        <button class="btn success" id="extract-all-btn" disabled> Extract All</button>
+                        <button class="btn success" id="generate-config-btn" disabled> Generate Config</button>
+                    </div>
                 </div>
 
                 <div id="coordinate-debug" class="coordinate-debug hidden">
-                    <strong>🔧 Debug:</strong><br>
+                    <strong>🔧 Debug Info:</strong><br>
                     <span id="debug-info">No coordinates selected</span>
                 </div>
 
                 <div class="search-box">
-                    <label for="search-text">🔍 Search Text:</label>
-                    <input type="text" id="search-text" placeholder="Enter text to search...">
-                    <button class="btn primary" id="search-btn">Search</button>
+                    <label for="search-text">🔍 Search Text on Page:</label>
+                    <input type="text" id="search-text" placeholder="Enter text to search and highlight..." disabled>
+                    <button class="btn primary" id="search-btn" disabled>Search</button>
                 </div>
 
                 <div class="coordinate-input">
-                    <label>📍 PDF Coordinates (x1, y1, x2, y2):</label>
-                    <input type="text" id="coord-input" placeholder="e.g., 100,200,300,400">
+                    <label>📍 Manual Coordinates (x1, y1, x2, y2):</label>
+                    <input type="text" id="coord-input" placeholder="e.g., 100,200,300,400" disabled>
+                    <div class="validation-message hidden" id="coord-validation">Please enter valid coordinates in format: x1,y1,x2,y2</div>
                 </div>
 
                 <div class="coord-grid">
                     <div>
                         <label>PDF X1:</label>
-                        <input type="number" id="pdf_x1" placeholder="0" step="0.1">
+                        <input type="number" id="pdf_x1" placeholder="0" step="0.1" disabled>
                     </div>
                     <div>
                         <label>PDF Y1:</label>
-                        <input type="number" id="pdf_y1" placeholder="0" step="0.1">
+                        <input type="number" id="pdf_y1" placeholder="0" step="0.1" disabled>
                     </div>
                     <div>
                         <label>PDF X2:</label>
-                        <input type="number" id="pdf_x2" placeholder="0" step="0.1">
+                        <input type="number" id="pdf_x2" placeholder="0" step="0.1" disabled>
                     </div>
                     <div>
                         <label>PDF Y2:</label>
-                        <input type="number" id="pdf_y2" placeholder="0" step="0.1">
+                        <input type="number" id="pdf_y2" placeholder="0" step="0.1" disabled>
                     </div>
                 </div>
 
                 <div class="control-buttons">
-                    <button class="btn primary" id="extract-btn">Extract</button>
-                    <button class="btn" id="show-area-btn">Show</button>
-                    <button class="btn" id="clear-selection-btn">Clear</button>
+                    <button class="btn primary" id="extract-btn" disabled>📝 Extract</button>
+                    <button class="btn" id="show-area-btn" disabled>👁️ Show</button>
+                    <button class="btn danger" id="clear-selection-btn" disabled>🗑️ Clear</button>
                 </div>
 
                 <div>
@@ -463,594 +168,13 @@
                     </div>
                 </div>
 
-                <div class="export-buttons">
-                    <button class="btn" id="export-btn">📤 Export</button>
-                    <button class="btn" id="analyze-layout-btn">🔍 Analyze</button>
+                <div class="control-buttons" style="margin-top: 20px;">
+                    <button class="btn" id="analyze-layout-btn" disabled>📊 Layout</button>
+                    <button class="btn success" id="export-btn" disabled>💾 Export Simple</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-        let currentPdf = null;
-        let currentPage = 1;
-        let totalPages = 0;
-        let isSelecting = false;
-        let selectionStart = null;
-        let currentScale = 1.0;
-        let baseResolution = 150; // DPI for scale 1.0
-        let pdfDimensions = { width: 0, height: 0 };
-        let currentImageDimensions = { width: 0, height: 0 };
-
-        // DOM elements
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('pdf-file');
-        const pdfControls = document.getElementById('pdf-controls');
-        const pdfCanvas = document.getElementById('pdf-canvas');
-        const pageInfo = document.getElementById('page-info');
-        const statusArea = document.getElementById('status-area');
-        const extractedText = document.getElementById('extracted-text');
-        const debugInfo = document.getElementById('debug-info');
-        const coordinateDebug = document.getElementById('coordinate-debug');
-        const zoomInfo = document.getElementById('zoom-info');
-        const canvasContainer = document.getElementById('canvas-container');
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-        });
-
-        function setupEventListeners() {
-            // File upload
-            fileInput.addEventListener('change', handleFileUpload);
-
-            // Drag and drop
-            uploadArea.addEventListener('dragover', handleDragOver);
-            uploadArea.addEventListener('drop', handleDrop);
-            uploadArea.addEventListener('dragleave', handleDragLeave);
-
-            // Page controls
-            document.getElementById('prev-page').addEventListener('click', () => changePage(-1));
-            document.getElementById('next-page').addEventListener('click', () => changePage(1));
-            document.getElementById('zoom-in').addEventListener('click', () => changeZoom(1.25));
-            document.getElementById('zoom-out').addEventListener('click', () => changeZoom(0.8));
-            document.getElementById('reset-zoom').addEventListener('click', resetZoom);
-
-            // Canvas selection
-            pdfCanvas.addEventListener('mousedown', startSelection);
-            pdfCanvas.addEventListener('mousemove', updateSelection);
-            pdfCanvas.addEventListener('mouseup', endSelection);
-            pdfCanvas.addEventListener('load', onImageLoad);
-
-            // Coordinate inputs
-            document.getElementById('coord-input').addEventListener('input', updateCoordinatesFromInput);
-            ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2'].forEach(id => {
-                document.getElementById(id).addEventListener('input', updateCoordinatesFromFields);
-            });
-
-            // Action buttons
-            document.getElementById('extract-btn').addEventListener('click', extractText);
-            document.getElementById('show-area-btn').addEventListener('click', showArea);
-            document.getElementById('clear-selection-btn').addEventListener('click', clearSelection);
-            document.getElementById('search-btn').addEventListener('click', searchText);
-            document.getElementById('export-btn').addEventListener('click', exportResults);
-            document.getElementById('analyze-layout-btn').addEventListener('click', analyzeLayout);
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file && file.type === 'application/pdf') {
-                uploadPdf(file);
-            } else {
-                showStatus('Please select a valid PDF file', 'error');
-            }
-        }
-
-        function handleDragOver(event) {
-            event.preventDefault();
-            uploadArea.classList.add('dragover');
-        }
-
-        function handleDrop(event) {
-            event.preventDefault();
-            uploadArea.classList.remove('dragover');
-
-            const file = event.dataTransfer.files[0];
-            if (file && file.type === 'application/pdf') {
-                fileInput.files = event.dataTransfer.files;
-                uploadPdf(file);
-            } else {
-                showStatus('Please drop a valid PDF file', 'error');
-            }
-        }
-
-        function handleDragLeave(event) {
-            uploadArea.classList.remove('dragover');
-        }
-
-        async function uploadPdf(file) {
-            const formData = new FormData();
-            formData.append('pdf_file', file);
-
-            showStatus('Processing PDF with OkayDocay...', 'info');
-
-            try {
-                const response = await fetch('/upload_pdf', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    currentPdf = result.filename;
-                    totalPages = result.page_count;
-                    currentPage = 1;
-                    pdfDimensions.width = result.page_width;
-                    pdfDimensions.height = result.page_height;
-
-                    uploadArea.classList.add('hidden');
-                    pdfControls.classList.remove('hidden');
-                    coordinateDebug.classList.remove('hidden');
-
-                    currentScale = 1.0; // Reset zoom
-                    loadPage(1);
-                    showStatus(`PDF loaded successfully! ${totalPages} pages (${result.page_width}×${result.page_height} pts)`, 'success');
-                } else {
-                    showStatus(`Upload failed: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus(`Upload error: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadPage(pageNum) {
-            if (!currentPdf) return;
-
-            showStatus(`Loading page ${pageNum} at ${Math.round(currentScale * 100)}% zoom...`, 'info');
-
-            try {
-                const response = await fetch(`/get_page/${pageNum}?scale=${currentScale}&filename=${currentPdf}`);
-                const result = await response.json();
-
-                if (result.success) {
-                    pdfCanvas.src = result.image;
-
-                    // Store actual image dimensions from the response
-                    currentImageDimensions.width = result.display_width;
-                    currentImageDimensions.height = result.display_height;
-
-                    updateZoomInfo();
-                    updatePageInfo();
-                    clearSelection();
-
-                    const qualityInfo = result.cached ? ' (cached)' : '';
-                    showStatus(`Page ${pageNum} loaded at ${result.resolution} DPI${qualityInfo} - ${result.word_count} words`, 'success');
-
-                    updateDebugInfo(`Loaded: PDF(${pdfDimensions.width}×${pdfDimensions.height}) -> Image(${currentImageDimensions.width}×${currentImageDimensions.height})`);
-                } else {
-                    showStatus(`Failed to load page: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus(`Page load error: ${error.message}`, 'error');
-            }
-        }
-
-        function onImageLoad() {
-            // Set the actual size of the image element to match the generated image
-            pdfCanvas.style.width = currentImageDimensions.width + 'px';
-            pdfCanvas.style.height = currentImageDimensions.height + 'px';
-            updateDebugInfo(`Image set to: ${currentImageDimensions.width}×${currentImageDimensions.height}px`);
-        }
-
-        function changePage(delta) {
-            const newPage = currentPage + delta;
-            if (newPage >= 1 && newPage <= totalPages) {
-                currentPage = newPage;
-                loadPage(currentPage);
-            }
-        }
-
-        function changeZoom(factor) {
-            currentScale *= factor;
-            currentScale = Math.max(0.25, Math.min(4.0, currentScale));
-            loadPage(currentPage);
-        }
-
-        function resetZoom() {
-            currentScale = 1.0;
-            loadPage(currentPage);
-        }
-
-        function updateZoomInfo() {
-            zoomInfo.textContent = Math.round(currentScale * 100) + '%';
-        }
-
-        function updatePageInfo() {
-            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-        }
-
-        function updateDebugInfo(info) {
-            debugInfo.innerHTML = info;
-        }
-
-        function getCoordinateConversionFactor() {
-            // Calculate the conversion factor from image pixels to PDF points
-            return {
-                x: pdfDimensions.width / currentImageDimensions.width,
-                y: pdfDimensions.height / currentImageDimensions.height
-            };
-        }
-
-        function startSelection(event) {
-            if (!currentPdf) return;
-
-            isSelecting = true;
-            const rect = pdfCanvas.getBoundingClientRect();
-
-            // Get coordinates relative to the actual image
-            selectionStart = {
-                x: event.clientX - rect.left,
-                y: event.clientY - rect.top
-            };
-
-            clearHighlights();
-            updateDebugInfo(`Starting selection at image pixel: (${selectionStart.x.toFixed(1)}, ${selectionStart.y.toFixed(1)})`);
-        }
-
-        function updateSelection(event) {
-            if (!isSelecting || !selectionStart) return;
-
-            const rect = pdfCanvas.getBoundingClientRect();
-            const currentPos = {
-                x: event.clientX - rect.left,
-                y: event.clientY - rect.top
-            };
-
-            // Calculate image pixel coordinates
-            const imageCoords = {
-                x1: Math.min(selectionStart.x, currentPos.x),
-                y1: Math.min(selectionStart.y, currentPos.y),
-                x2: Math.max(selectionStart.x, currentPos.x),
-                y2: Math.max(selectionStart.y, currentPos.y)
-            };
-
-            // Convert to PDF coordinates
-            const conversionFactor = getCoordinateConversionFactor();
-            const pdfCoords = {
-                x1: imageCoords.x1 * conversionFactor.x,
-                y1: imageCoords.y1 * conversionFactor.y,
-                x2: imageCoords.x2 * conversionFactor.x,
-                y2: imageCoords.y2 * conversionFactor.y
-            };
-
-            updateCoordinateFields(pdfCoords.x1, pdfCoords.y1, pdfCoords.x2, pdfCoords.y2);
-            updateDebugInfo(`Selecting:<br>Image: (${imageCoords.x1.toFixed(1)}, ${imageCoords.y1.toFixed(1)}, ${imageCoords.x2.toFixed(1)}, ${imageCoords.y2.toFixed(1)})<br>PDF: (${pdfCoords.x1.toFixed(1)}, ${pdfCoords.y1.toFixed(1)}, ${pdfCoords.x2.toFixed(1)}, ${pdfCoords.y2.toFixed(1)})<br>Factor: ${conversionFactor.x.toFixed(3)}, ${conversionFactor.y.toFixed(3)}`);
-
-            showSelectionBox(selectionStart, currentPos);
-        }
-
-        function endSelection(event) {
-            if (!isSelecting) return;
-
-            isSelecting = false;
-            const rect = pdfCanvas.getBoundingClientRect();
-            const endPos = {
-                x: event.clientX - rect.left,
-                y: event.clientY - rect.top
-            };
-
-            if (selectionStart &&
-                Math.abs(endPos.x - selectionStart.x) > 5 &&
-                Math.abs(endPos.y - selectionStart.y) > 5) {
-
-                const imageCoords = {
-                    x1: Math.min(selectionStart.x, endPos.x),
-                    y1: Math.min(selectionStart.y, endPos.y),
-                    x2: Math.max(selectionStart.x, endPos.x),
-                    y2: Math.max(selectionStart.y, endPos.y)
-                };
-
-                const conversionFactor = getCoordinateConversionFactor();
-                const pdfCoords = {
-                    x1: imageCoords.x1 * conversionFactor.x,
-                    y1: imageCoords.y1 * conversionFactor.y,
-                    x2: imageCoords.x2 * conversionFactor.x,
-                    y2: imageCoords.y2 * conversionFactor.y
-                };
-
-                updateCoordinateFields(pdfCoords.x1, pdfCoords.y1, pdfCoords.x2, pdfCoords.y2);
-                extractText();
-            }
-
-            clearSelectionBox();
-        }
-
-        function updateCoordinateFields(x1, y1, x2, y2) {
-            document.getElementById('pdf_x1').value = Math.round(x1 * 10) / 10;
-            document.getElementById('pdf_y1').value = Math.round(y1 * 10) / 10;
-            document.getElementById('pdf_x2').value = Math.round(x2 * 10) / 10;
-            document.getElementById('pdf_y2').value = Math.round(y2 * 10) / 10;
-            document.getElementById('coord-input').value = `${Math.round(x1)},${Math.round(y1)},${Math.round(x2)},${Math.round(y2)}`;
-        }
-
-        function updateCoordinatesFromInput() {
-            const input = document.getElementById('coord-input').value;
-            const coords = input.split(',').map(x => parseFloat(x.trim()));
-
-            if (coords.length === 4 && coords.every(x => !isNaN(x))) {
-                document.getElementById('pdf_x1').value = coords[0];
-                document.getElementById('pdf_y1').value = coords[1];
-                document.getElementById('pdf_x2').value = coords[2];
-                document.getElementById('pdf_y2').value = coords[3];
-                showArea();
-            }
-        }
-
-        function updateCoordinatesFromFields() {
-            const x1 = parseFloat(document.getElementById('pdf_x1').value) || 0;
-            const y1 = parseFloat(document.getElementById('pdf_y1').value) || 0;
-            const x2 = parseFloat(document.getElementById('pdf_x2').value) || 0;
-            const y2 = parseFloat(document.getElementById('pdf_y2').value) || 0;
-
-            document.getElementById('coord-input').value = `${x1},${y1},${x2},${y2}`;
-            updateDebugInfo(`Manual PDF coords: (${x1}, ${y1}, ${x2}, ${y2})`);
-            showArea();
-        }
-
-        async function extractText() {
-            if (!currentPdf) {
-                showStatus('Please upload a PDF first', 'error');
-                return;
-            }
-
-            const pdfX1 = parseFloat(document.getElementById('pdf_x1').value);
-            const pdfY1 = parseFloat(document.getElementById('pdf_y1').value);
-            const pdfX2 = parseFloat(document.getElementById('pdf_x2').value);
-            const pdfY2 = parseFloat(document.getElementById('pdf_y2').value);
-
-            if (isNaN(pdfX1) || isNaN(pdfY1) || isNaN(pdfX2) || isNaN(pdfY2)) {
-                showStatus('Please enter valid coordinates', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/extract_text', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        page_num: currentPage,
-                        x1: pdfX1,
-                        y1: pdfY1,
-                        x2: pdfX2,
-                        y2: pdfY2
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    extractedText.textContent = result.text || 'No text found in selected area';
-                    showStatus(`Extracted ${result.word_count} words successfully`, 'success');
-
-                    // Show highlight by converting PDF coordinates back to image coordinates
-                    const conversionFactor = getCoordinateConversionFactor();
-                    const imageX1 = pdfX1 / conversionFactor.x;
-                    const imageY1 = pdfY1 / conversionFactor.y;
-                    const imageX2 = pdfX2 / conversionFactor.x;
-                    const imageY2 = pdfY2 / conversionFactor.y;
-
-                    showHighlight(imageX1, imageY1, imageX2, imageY2);
-                    updateDebugInfo(`Extracted from PDF: (${pdfX1}, ${pdfY1}, ${pdfX2}, ${pdfY2})<br>Highlighted at image: (${imageX1.toFixed(1)}, ${imageY1.toFixed(1)}, ${imageX2.toFixed(1)}, ${imageY2.toFixed(1)})`);
-                } else {
-                    showStatus(`Extraction failed: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus(`Extraction error: ${error.message}`, 'error');
-            }
-        }
-
-        async function searchText() {
-            const searchTerm = document.getElementById('search-text').value.trim();
-            if (!searchTerm || !currentPdf) return;
-
-            try {
-                const response = await fetch('/search_text', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        page_num: currentPage,
-                        search_term: searchTerm
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    clearHighlights();
-                    const conversionFactor = getCoordinateConversionFactor();
-
-                    result.results.forEach(item => {
-                        // Convert PDF coordinates to image coordinates for highlighting
-                        const imageX1 = item.x1 / conversionFactor.x;
-                        const imageY1 = item.y1 / conversionFactor.y;
-                        const imageX2 = item.x2 / conversionFactor.x;
-                        const imageY2 = item.y2 / conversionFactor.y;
-                        showHighlight(imageX1, imageY1, imageX2, imageY2, '#10b981');
-                    });
-                    showStatus(`Found ${result.count} matches for "${searchTerm}"`, 'success');
-                } else {
-                    showStatus(`Search failed: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus(`Search error: ${error.message}`, 'error');
-            }
-        }
-
-        function showArea() {
-            const pdfX1 = parseFloat(document.getElementById('pdf_x1').value);
-            const pdfY1 = parseFloat(document.getElementById('pdf_y1').value);
-            const pdfX2 = parseFloat(document.getElementById('pdf_x2').value);
-            const pdfY2 = parseFloat(document.getElementById('pdf_y2').value);
-
-            if (!isNaN(pdfX1) && !isNaN(pdfY1) && !isNaN(pdfX2) && !isNaN(pdfY2)) {
-                // Convert PDF coordinates to image coordinates for highlighting
-                const conversionFactor = getCoordinateConversionFactor();
-                const imageX1 = pdfX1 / conversionFactor.x;
-                const imageY1 = pdfY1 / conversionFactor.y;
-                const imageX2 = pdfX2 / conversionFactor.x;
-                const imageY2 = pdfY2 / conversionFactor.y;
-
-                showHighlight(imageX1, imageY1, imageX2, imageY2, '#f59e0b');
-                updateDebugInfo(`Showing area: PDF(${pdfX1}, ${pdfY1}, ${pdfX2}, ${pdfY2}) -> Image(${imageX1.toFixed(1)}, ${imageY1.toFixed(1)}, ${imageX2.toFixed(1)}, ${imageY2.toFixed(1)})`);
-            }
-        }
-
-        function showHighlight(x1, y1, x2, y2, color = '#ef4444') {
-            const highlight = document.createElement('div');
-            highlight.className = 'highlight-box';
-            highlight.style.left = `${x1}px`;
-            highlight.style.top = `${y1}px`;
-            highlight.style.width = `${x2 - x1}px`;
-            highlight.style.height = `${y2 - y1}px`;
-            highlight.style.borderColor = color;
-            highlight.style.backgroundColor = color + '33';
-
-            canvasContainer.appendChild(highlight);
-        }
-
-        function showSelectionBox(start, end) {
-            clearSelectionBox();
-            const box = document.createElement('div');
-            box.className = 'selection-box';
-            box.id = 'selection-box';
-
-            const left = Math.min(start.x, end.x);
-            const top = Math.min(start.y, end.y);
-            const width = Math.abs(end.x - start.x);
-            const height = Math.abs(end.y - start.y);
-
-            box.style.left = `${left}px`;
-            box.style.top = `${top}px`;
-            box.style.width = `${width}px`;
-            box.style.height = `${height}px`;
-
-            canvasContainer.appendChild(box);
-        }
-
-        function clearSelectionBox() {
-            const box = document.getElementById('selection-box');
-            if (box) box.remove();
-        }
-
-        function clearHighlights() {
-            const highlights = document.querySelectorAll('.highlight-box');
-            highlights.forEach(h => h.remove());
-        }
-
-        function clearSelection() {
-            clearHighlights();
-            clearSelectionBox();
-            ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2'].forEach(id => {
-                document.getElementById(id).value = '';
-            });
-            document.getElementById('coord-input').value = '';
-            updateDebugInfo('No coordinates selected');
-        }
-
-        async function analyzeLayout() {
-            if (!currentPdf) return;
-
-            try {
-                const response = await fetch('/analyze_layout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ page_num: currentPage })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    let layoutText = `📊 OkayDocay Layout Analysis (Page ${result.page_number})\n\n`;
-                    layoutText += `📝 Words: ${result.total_words}\n`;
-                    layoutText += `📄 Lines: ${result.total_lines}\n`;
-                    layoutText += `📋 Tables: ${result.total_tables}\n`;
-                    layoutText += `📐 Dimensions: ${result.page_width}×${result.page_height} points\n`;
-                    layoutText += `🔍 Current zoom: ${Math.round(currentScale * 100)}%\n\n`;
-
-                    if (result.top_fonts && result.top_fonts.length > 0) {
-                        layoutText += `🔤 Top Fonts:\n`;
-                        result.top_fonts.forEach((font, i) => {
-                            layoutText += `${i + 1}. ${font.font} (${font.size}pt) - ${font.count} words\n`;
-                        });
-                        layoutText += `\n`;
-                    }
-
-                    if (result.lines && result.lines.length > 0) {
-                        layoutText += `📄 First lines:\n`;
-                        result.lines.slice(0, 10).forEach((line, i) => {
-                            layoutText += `${i + 1}. ${line.text.substring(0, 50)}...\n`;
-                        });
-                    }
-
-                    extractedText.textContent = layoutText;
-                    showStatus('Layout analysis completed', 'success');
-                } else {
-                    showStatus(`Analysis failed: ${result.error}`, 'error');
-                }
-            } catch (error) {
-                showStatus(`Analysis error: ${error.message}`, 'error');
-            }
-        }
-
-        async function exportResults() {
-            if (!currentPdf) return;
-
-            const coordinates = [{
-                page: currentPage,
-                pdf_x1: parseFloat(document.getElementById('pdf_x1').value) || 0,
-                pdf_y1: parseFloat(document.getElementById('pdf_y1').value) || 0,
-                pdf_x2: parseFloat(document.getElementById('pdf_x2').value) || 0,
-                pdf_y2: parseFloat(document.getElementById('pdf_y2').value) || 0,
-                text: extractedText.textContent,
-                zoom_level: currentScale,
-                image_dimensions: currentImageDimensions,
-                pdf_dimensions: pdfDimensions,
-                app: 'OkayDocay'
-            }];
-
-            try {
-                const response = await fetch('/export_coordinates', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ coordinates })
-                });
-
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `okaydocay_coordinates_${currentPdf}_export.txt`;
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    showStatus('Export completed successfully', 'success');
-                } else {
-                    showStatus('Export failed', 'error');
-                }
-            } catch (error) {
-                showStatus(`Export error: ${error.message}`, 'error');
-            }
-        }
-
-        function showStatus(message, type) {
-            statusArea.innerHTML = `<div class="status ${type}">${message}</div>`;
-            setTimeout(() => {
-                if (statusArea.innerHTML.includes(message)) {
-                    statusArea.innerHTML = '';
-                }
-            }, 6000);
-        }
-    </script>
+   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
