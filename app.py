@@ -21,7 +21,7 @@ sessions_lock = threading.Lock()
 
 # Configuration
 MAX_SESSION_AGE = 3600  # 1 hour
-CLEANUP_INTERVAL = 300  # 5 minutes
+CLEANUP_INTERVAL = 3600
 
 
 class UserSession:
@@ -88,6 +88,35 @@ def get_user_session():
         user_session = user_sessions[session_id]
         user_session.update_access_time()
         return user_session
+
+
+def update_access_time(self):
+    self.last_accessed = datetime.now()
+
+    def cleanup(self):
+        """Clean up resources when session expires"""
+        # Close PDF objects
+        for pdf_data in self.pdfs.values():
+            if 'pdf' in pdf_data:
+                pdf_data['pdf'].close()
+
+        # Remove temp files
+        for temp_file in self.temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except:
+                pass
+
+        # Clear all data including extracted_data
+        self.pdfs.clear()
+        self.image_cache.clear()
+        self.text_cache.clear()
+        self.page_fields.clear()
+        self.extracted_data.clear()
+        self.temp_files.clear()
+def is_expired(self):
+    return (datetime.now() - self.last_accessed).seconds > MAX_SESSION_AGE
 
 
 def cleanup_expired_sessions():
@@ -192,6 +221,14 @@ def upload_pdf():
         # Clear existing fields when new PDF is uploaded
         user_session.page_fields.clear()
 
+        # NEW: Initialize server-side extracted data
+        user_session.extracted_data = {
+            'pdf_name': filename,
+            'total_pages': page_count,
+            'created_on': datetime.now().isoformat(),
+            'pages': {}
+        }
+
         load_time = round((time.time() - start_time) * 1000, 2)
 
         return jsonify({
@@ -206,7 +243,8 @@ def upload_pdf():
             'session_info': {
                 'pdfs_loaded': len(user_session.pdfs),
                 'cache_items': len(user_session.image_cache)
-            }
+            },
+            'extracted_data': user_session.extracted_data  # Return initial extracted data
         })
 
     except Exception as e:
@@ -685,9 +723,151 @@ def admin_stats():
         })
 
 
+@app.route('/get_extracted_data')
+def get_extracted_data():
+    """Get current user's extracted data"""
+    try:
+        user_session = get_user_session()
+        return jsonify({
+            'success': True,
+            'extracted_data': user_session.extracted_data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/update_extracted_data', methods=['POST'])
+def update_extracted_data():
+    """Update user's extracted data"""
+    try:
+        user_session = get_user_session()
+        data = request.get_json()
+
+        # Update the server-side extracted data
+        if 'pdf_name' in data:
+            user_session.extracted_data['pdf_name'] = data['pdf_name']
+        if 'total_pages' in data:
+            user_session.extracted_data['total_pages'] = data['total_pages']
+        if 'created_on' in data:
+            user_session.extracted_data['created_on'] = data['created_on']
+        if 'pages' in data:
+            user_session.extracted_data['pages'] = data['pages']
+
+        return jsonify({
+            'success': True,
+            'extracted_data': user_session.extracted_data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/add_field_to_extracted_data', methods=['POST'])
+def add_field_to_extracted_data():
+    """Add a field to the extracted data structure"""
+    try:
+        user_session = get_user_session()
+        data = request.get_json()
+
+        field_name = data.get('field_name')
+        coordinates = data.get('coordinates')
+        page_num = int(data.get('page_num'))
+
+        # Initialize page if it doesn't exist
+        if str(page_num) not in user_session.extracted_data['pages']:
+            user_session.extracted_data['pages'][str(page_num)] = {'fields': []}
+
+        # Add the field
+        field_data = {
+            'name': field_name,
+            'coordinates': coordinates
+        }
+
+        user_session.extracted_data['pages'][str(page_num)]['fields'].append(field_data)
+
+        return jsonify({
+            'success': True,
+            'extracted_data': user_session.extracted_data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/remove_field_from_extracted_data', methods=['POST'])
+def remove_field_from_extracted_data():
+    """Remove a field from the extracted data structure"""
+    try:
+        user_session = get_user_session()
+        data = request.get_json()
+
+        field_name = data.get('field_name')
+        page_num = str(data.get('page_num'))
+
+        if page_num in user_session.extracted_data['pages']:
+            fields = user_session.extracted_data['pages'][page_num]['fields']
+            user_session.extracted_data['pages'][page_num]['fields'] = [
+                f for f in fields if f['name'] != field_name
+            ]
+
+            # Remove page if no fields left
+            if len(user_session.extracted_data['pages'][page_num]['fields']) == 0:
+                del user_session.extracted_data['pages'][page_num]
+
+        return jsonify({
+            'success': True,
+            'extracted_data': user_session.extracted_data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/clear_extracted_data', methods=['POST'])
+def clear_extracted_data():
+    """Clear all extracted data for current user"""
+    try:
+        user_session = get_user_session()
+
+        # Keep basic info but clear pages
+        user_session.extracted_data['pages'] = {}
+
+        return jsonify({
+            'success': True,
+            'extracted_data': user_session.extracted_data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/generate_config_json', methods=['POST'])
+def generate_config_json():
+    """Generate the final configuration JSON"""
+    try:
+        user_session = get_user_session()
+
+
+        config_data = {
+            'pdf_name': user_session.extracted_data['pdf_name'],
+            'total_pages': user_session.extracted_data['total_pages'],
+            'created_on': datetime.now().isoformat(),
+            'pages': user_session.extracted_data['pages']
+        }
+
+
+        config_filename = f"{user_session.extracted_data['pdf_name'].replace('.pdf', '')}_config_{int(time.time())}.json"
+
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=2, ensure_ascii=False)
+            temp_path = f.name
+
+        user_session.temp_files.append(temp_path)
+
+        return send_file(temp_path, as_attachment=True, download_name=config_filename)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
 if __name__ == '__main__':
-    print("Multi-user PDF processor with Field Management starting...")
-    print("Features: Session isolation, Field management, JSON export")
+
     print("http://localhost:5000")
 
     app.run(debug=True, host='0.0.0.0', port=5000)

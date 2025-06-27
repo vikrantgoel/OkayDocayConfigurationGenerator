@@ -3,178 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OkayDocay - PDF Coordinates Finder</title>
-     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-
+    <title>OkayDocay Enhanced Config Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='config_style.css') }}">
 </head>
 <body>
-
-    <div class="loading-overlay hidden" id="loading-overlay">
-        <div style="text-align: center;">
-            <div class="loading-spinner"></div>
-            <div class="loading-text" id="loading-text">Processing...</div>
-        </div>
-    </div>
-
     <div class="container">
         <div class="header">
-            <h1>📄 OkayDocay</h1>
-            <p>Professional PDF coordinate extraction and configuration maker</p>
-
-            <div class="step-indicator">
-                <div class="step" id="step-upload">
-                    <span>📁</span> Upload PDF
-                </div>
-                <div class="step" id="step-navigate">
-                    <span>🧭</span> Navigate
-                </div>
-                <div class="step" id="step-select">
-                    <span>🎯</span> Configure
-                </div>
-                <div class="step" id="step-extract">
-                    <span>📝</span> Extract
-                </div>
+            <h1>📄 OkayDocay Enhanced Config Generator</h1>
+            <p>Create PDF field configurations with mathematical logic for validation - Multi-user session support</p>
+            <div id="session-indicator" style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.5rem;">
+                Loading session...
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="pdf-viewer">
-                <div class="upload-area" id="upload-area" onclick="document.getElementById('pdf-file').click()">
-                    <input type="file" id="pdf-file" class="file-input" accept=".pdf">
-                    <div class="upload-content">
-                        <div class="upload-icon">📁</div>
-                        <h3>Upload Your PDF File</h3>
-                        <p>Click here or drag and drop your PDF file</p>
-                        <p style="margin: 10px 0; font-size: 13px; opacity: 0.7;">Supports files up to 100MB</p>
-                        <button class="upload-button" type="button">Choose PDF File</button>
-                    </div>
+        <div id="status-area"></div>
+
+        <div class="main-grid">
+            <!-- Left Panel: Form Configuration -->
+            <div class="panel">
+                <h2>🏗️ Form Configuration</h2>
+
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('fields')">📝 Fields</div>
+                    <div class="tab" onclick="switchTab('logic')">⚙️ Logic</div>
+                    <div class="tab" onclick="switchTab('import')">📥 Import</div>
                 </div>
 
-                <div id="pdf-controls" class="hidden">
-                    <div class="page-controls">
-                        <button class="btn" id="prev-page" disabled>← Prev</button>
-                        <span id="page-info">Page 1 of 1</span>
-                        <button class="btn" id="next-page" disabled>Next →</button>
-                        <button class="btn" id="zoom-out">Zoom Out</button>
-                        <span class="zoom-info" id="zoom-info">100%</span>
-                        <button class="btn" id="zoom-in">Zoom In</button>
-                        <button class="btn" id="reset-zoom">Reset</button>
+                <!-- Fields Tab -->
+                <div id="fields-tab" class="tab-content active">
+                    <div class="form-group">
+                        <label>📋 Form Name:</label>
+                        <input type="text" id="form-name" placeholder="e.g., Invoice Form, Tax Return, Contract">
                     </div>
 
-                    <div class="canvas-container" id="canvas-container">
-                        <img id="pdf-canvas" alt="PDF Page">
+                    <div class="form-group">
+                        <label>📄 Description:</label>
+                        <textarea id="form-description" rows="2" placeholder="Brief description of this form"></textarea>
                     </div>
-                </div>
-            </div>
 
+                    <div class="form-group">
+                        <label>📝 Field Name:</label>
+                        <input type="text" id="field-name" placeholder="e.g., total_amount, tax_rate, due_date">
+                    </div>
 
-            <div class="controls">
-                <div id="status-area"></div>
-
-
-
-                <!-- Config Maker Section -->
-                <div class="info-panel" id="config-section" style="display: none;">
-                    <h3>⚙️ Configuration Maker</h3>
-                    <p>Define field mappings by selection for automated extraction</p>
-                </div>
-
-                <div id="config-controls" class="hidden">
-                    <div class="coordinate-input">
-                        <label>📄 Target Page:</label>
-                        <select id="target-page" disabled>
-                            <option value="">Select page...</option>
+                    <div class="form-group">
+                        <label>🏷️ Data Type:</label>
+                        <select id="field-type">
+                            <option value="text">📝 Text</option>
+                            <option value="number">🔢 Number</option>
+                            <option value="currency">💰 Currency</option>
+                            <option value="date">📅 Date</option>
+                            <option value="percentage">📊 Percentage</option>
+                            <option value="boolean">✅ Boolean</option>
+                            <option value="signature">✍️ Signature</option>
                         </select>
                     </div>
 
-                    <div class="coord-grid">
-                        <div>
-                            <label>📝 Field Name:</label>
-                            <input type="text" id="field-name" placeholder="e.g., Customer Name, Invoice Number">
+                    <div class="form-group">
+                        <label>📍 Coordinates (x1,y1,x2,y2):</label>
+                        <input type="text" id="field-coordinates" placeholder="100,200,400,230">
+                    </div>
+
+                    <div class="form-group">
+                        <label>📄 Page Number:</label>
+                        <input type="number" id="field-page" value="1" min="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>📋 Field Description:</label>
+                        <input type="text" id="field-description" placeholder="Brief description of this field">
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn primary" onclick="addField()">➕ Add Field</button>
+                        <button class="btn" onclick="clearFields()">🗑️ Clear All Fields</button>
+                    </div>
+                </div>
+
+                <!-- Logic Tab -->
+                <div id="logic-tab" class="tab-content">
+                    <div class="form-group">
+                        <label>⚙️ Validation Logic (JavaScript):</label>
+                        <textarea id="logic-script" class="logic-editor" placeholder="// Write JavaScript validation logic here
+// Available variables: fields (object with field values)
+// Return object with calculated values and validations
+
+function validateForm(fields) {
+    const result = {
+        calculated: {},
+        validations: []
+    };
+
+    // Example: Calculate total with tax
+    if (fields.subtotal && fields.tax_rate) {
+        result.calculated.total = fields.subtotal * (1 + fields.tax_rate / 100);
+    }
+
+    // Example: Validation rule
+    if (fields.total && fields.total < 0) {
+        result.validations.push({
+            field: 'total',
+            message: 'Total cannot be negative',
+            severity: 'error'
+        });
+    }
+
+    return result;
+}"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>🧪 Test Data (JSON):</label>
+                        <textarea id="test-data" rows="4" placeholder='{"subtotal": 100, "tax_rate": 10}'></textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn primary" onclick="testLogic()">🧪 Test Logic</button>
+                        <button class="btn" onclick="loadLogicTemplate()">📋 Load Template</button>
+                    </div>
+
+                    <div id="logic-test-result" class="hidden">
+                        <h4>Test Results:</h4>
+                        <div id="logic-output" class="json-preview"></div>
+                    </div>
+                </div>
+
+                <!-- Import Tab -->
+                <div id="import-tab" class="tab-content">
+                    <div class="form-group">
+                        <label>📥 Import Existing Configuration:</label>
+                        <div class="upload-area" id="json-upload-area" onclick="document.getElementById('json-file').click()">
+                            <input type="file" id="json-file" accept=".json" style="display: none;" onchange="importConfiguration(event)">
+                            <div>📄 Click to upload JSON configuration</div>
+                            <div style="font-size: 0.875rem; color: var(--gray-500); margin-top: 0.5rem;">
+                                Upload existing config to modify or use as template
+                            </div>
                         </div>
-                        <div>
-                            <label>📍 Selected Coordinates:</label>
-                            <input type="text" id="current-coords" readonly placeholder="Select area on PDF first">
+                    </div>
+
+                    <div class="form-group">
+                        <label>📋 Or Paste JSON:</label>
+                        <textarea id="json-paste" rows="10" placeholder='Paste your JSON configuration here...
+{
+  "form_name": "Example Form",
+  "fields": [...],
+  "logic_script": "..."
+}'></textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn primary" onclick="importFromPaste()">📥 Import from Paste</button>
+                        <button class="btn" onclick="clearImport()">🗑️ Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Preview and Export -->
+            <div class="panel">
+                <h2>👁️ Configuration Preview</h2>
+
+                <div class="form-group">
+                    <label>📋 Defined Fields:</label>
+                    <div id="fields-list" class="field-list">
+                        <div style="text-align: center; color: var(--gray-500); font-style: italic;">
+                            No fields defined yet. Add fields using the form on the left.
                         </div>
                     </div>
-
-                    <div class="validation-message hidden" id="field-validation">Please enter a field name</div>
-
-                    <div class="control-buttons">
-                        <button class="btn primary" id="add-field-btn" disabled>➕ Add Field</button>
-                        <button class="btn" id="preview-field-btn" disabled>👁️ Preview</button>
-                    </div>
-
-                    <div id="fields-list" class="extracted-text" style="max-height: 200px; font-family: inherit;">
-                        <div style="text-align: center; opacity: 0.7; font-style: italic;">
-                            No fields defined yet. Add fields using the button above.
-                        </div>
-                    </div>
-
-                    <div class="control-buttons" style="margin-top: 15px;">
-                        <button class="btn" id="clear-fields-btn" disabled>🗑️ Clear All</button>
-                        <button class="btn success" id="extract-all-btn" disabled> Extract All</button>
-                        <button class="btn success" id="generate-config-btn" disabled> Generate Config</button>
-                    </div>
                 </div>
 
-                <div id="coordinate-debug" class="coordinate-debug hidden">
-                    <strong>🔧 Debug Info:</strong><br>
-                    <span id="debug-info">No coordinates selected</span>
+                <div class="button-group">
+                    <button class="btn success" onclick="generateConfig()" disabled id="generate-btn">⚙️ Generate Config</button>
+                    <button class="btn primary" onclick="downloadConfig()" disabled id="download-btn">💾 Download JSON</button>
+                    <button class="btn" onclick="generateFormTemplate()" disabled id="form-template-btn">📝 Generate Form</button>
                 </div>
 
-                <div class="search-box">
-                    <label for="search-text">🔍 Search Text on Page:</label>
-                    <input type="text" id="search-text" placeholder="Enter text to search and highlight..." disabled>
-                    <button class="btn primary" id="search-btn" disabled>Search</button>
+                <div class="button-group">
+                    <button class="btn success" onclick="saveConfigPermanently()">💾 Save to Session</button>
+                    <button class="btn" onclick="clearCurrentConfig()">🗑️ Clear Current</button>
                 </div>
 
-                <div class="coordinate-input">
-                    <label>📍 Manual Coordinates (x1, y1, x2, y2):</label>
-                    <input type="text" id="coord-input" placeholder="e.g., 100,200,300,400" disabled>
-                    <div class="validation-message hidden" id="coord-validation">Please enter valid coordinates in format: x1,y1,x2,y2</div>
-                </div>
-
-                <div class="coord-grid">
-                    <div>
-                        <label>PDF X1:</label>
-                        <input type="number" id="pdf_x1" placeholder="0" step="0.1" disabled>
+                <div class="form-group">
+                    <label>📄 JSON Preview:</label>
+                    <div id="json-preview" class="json-preview">
+                        Configuration will appear here after adding fields...
                     </div>
-                    <div>
-                        <label>PDF Y1:</label>
-                        <input type="number" id="pdf_y1" placeholder="0" step="0.1" disabled>
-                    </div>
-                    <div>
-                        <label>PDF X2:</label>
-                        <input type="number" id="pdf_x2" placeholder="0" step="0.1" disabled>
-                    </div>
-                    <div>
-                        <label>PDF Y2:</label>
-                        <input type="number" id="pdf_y2" placeholder="0" step="0.1" disabled>
-                    </div>
-                </div>
-
-                <div class="control-buttons">
-                    <button class="btn primary" id="extract-btn" disabled>📝 Extract</button>
-                    <button class="btn" id="show-area-btn" disabled>👁️ Show</button>
-                    <button class="btn danger" id="clear-selection-btn" disabled>🗑️ Clear</button>
-                </div>
-
-                <div>
-                    <label>📄 Extracted Text:</label>
-                    <div class="extracted-text" id="extracted-text">
-                        Text will appear here after extraction...
-                    </div>
-                </div>
-
-                <div class="control-buttons" style="margin-top: 20px;">
-                    <button class="btn" id="analyze-layout-btn" disabled>📊 Layout</button>
-                    <button class="btn success" id="export-btn" disabled>💾 Export Simple</button>
                 </div>
             </div>
         </div>
+
+        <!-- Saved Configurations Panel -->
+        <div class="panel" style="margin-top: 2rem;">
+            <h2>💾 Your Saved Configurations</h2>
+
+            <div class="button-group">
+                <button class="btn" onclick="loadSavedConfigs()">🔄 Refresh</button>
+                <button class="btn" onclick="exportAllConfigs()">📤 Export All</button>
+                <button class="btn danger" onclick="clearAllConfigs()">🗑️ Clear All</button>
+            </div>
+
+            <div id="saved-configs" class="field-list">
+                <div style="text-align: center; color: var(--gray-500); font-style: italic;">
+                    Loading your saved configurations...
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Management Panel -->
+        <div class="panel" style="margin-top: 2rem;">
+            <h2>👤 Session Information</h2>
+            <div id="session-details" style="font-family: var(--font-mono); font-size: 0.875rem; color: var(--gray-600);">
+                Loading session information...
+            </div>
+            <div class="button-group" style="margin-top: 1rem;">
+                <button class="btn" onclick="loadSessionInfo()">🔄 Refresh Session</button>
+                <button class="btn" onclick="showSessionHelp()">❓ Help</button>
+            </div>
+        </div>
     </div>
-   <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <!-- Session Help Modal -->
+    <div id="session-help-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2rem; border-radius: var(--radius); max-width: 600px; margin: 2rem;">
+            <h3>🔒 Session-Based Configuration Management</h3>
+            <p style="margin: 1rem 0;">Your configurations are automatically saved to your browser session. Here's what you need to know:</p>
+            <ul style="margin: 1rem 0; padding-left: 2rem;">
+                <li><strong>Auto-save:</strong> Your current work is automatically saved every 30 seconds</li>
+                <li><strong>Session isolation:</strong> Your configurations are private to your session</li>
+                <li><strong>Session duration:</strong> Sessions last for 2 hours of inactivity</li>
+                <li><strong>Data persistence:</strong> Use "Save to Session" to permanently save configurations</li>
+                <li><strong>Export:</strong> Download configurations as JSON files for external storage</li>
+            </ul>
+            <button class="btn primary" onclick="hideSessionHelp()">Got it!</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='config_script.js') }}"></script>
+
+    <script>
+        // Additional session management functions
+        async function loadSessionInfo() {
+            try {
+                const response = await fetch('/api/session-info');
+                const result = await response.json();
+
+                if (result.success) {
+                    sessionInfo = result;
+
+                    // Update session indicator in header
+                    const indicator = document.getElementById('session-indicator');
+                    indicator.innerHTML = `Session: ${result.session_id} | Configs: ${result.configurations_count} | Auto-save enabled`;
+
+                    // Update session details panel
+                    const details = document.getElementById('session-details');
+                    details.innerHTML = `
+                        <div><strong>Session ID:</strong> ${result.session_id}</div>
+                        <div><strong>Created:</strong> ${new Date(result.created_at).toLocaleString()}</div>
+                        <div><strong>Last Activity:</strong> ${new Date(result.last_accessed).toLocaleString()}</div>
+                        <div><strong>Saved Configurations:</strong> ${result.configurations_count}</div>
+                        <div><strong>Temporary Files:</strong> ${result.temp_files}</div>
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: var(--gray-50); border-radius: var(--radius);">
+                            <small><strong>Current Config:</strong> ${result.current_config.form_name || 'Untitled'} (${result.current_config.fields.length} fields)</small>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load session info:', error);
+            }
+        }
+
+        function showSessionHelp() {
+            document.getElementById('session-help-modal').classList.remove('hidden');
+        }
+
+        function hideSessionHelp() {
+            document.getElementById('session-help-modal').classList.add('hidden');
+        }
+
+        // Auto-refresh session info every 5 minutes
+        setInterval(loadSessionInfo, 300000);
+
+        // Load session info on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(loadSessionInfo, 1000); // Delay to let main initialization complete
+        });
+    </script>
 </body>
 </html>
