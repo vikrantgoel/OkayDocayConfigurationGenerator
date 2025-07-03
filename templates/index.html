@@ -3,289 +3,974 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OkayDocay Enhanced Config Generator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='config_style.css') }}">
+    <title>OkayDocay Enhanced - PDF Configuration Maker with GitHub Integration</title>
+    <style>
+        /* ================================
+           ENHANCED CSS FOR GITHUB INTEGRATION
+           ================================ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+            --primary-dark: #3730a3;
+            --primary-50: #eef2ff;
+            --primary-100: #e0e7ff;
+            --success: #10b981;
+            --success-50: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-50: #fffbeb;
+            --danger: #ef4444;
+            --danger-50: #fef2f2;
+            --github: #0891b2;
+            --github-50: #ecfeff;
+            --white: #ffffff;
+            --gray-25: #fcfcfd;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            --radius: 0.375rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-full: 9999px;
+            --transition: all 0.2s ease;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--gray-700);
+            background: var(--gray-25);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--gray-25) 0%, var(--white) 100%);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
+            border-radius: var(--radius-full);
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        .loading-text {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-100);
+            padding: 32px 24px;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            margin-bottom: 32px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: var(--radius-full);
+            background: var(--gray-50);
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: var(--transition);
+            border: 1px solid var(--gray-200);
+        }
+
+        .step.active {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .step.completed {
+            background: var(--success);
+            color: var(--white);
+            border-color: var(--success);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            flex: 1;
+            overflow: hidden;
+            background: var(--white);
+            border-top: 1px solid var(--gray-100);
+        }
+
+        .pdf-viewer {
+            padding: 24px;
+            border-right: 1px solid var(--gray-100);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--gray-25);
+        }
+
+        .upload-area {
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-xl);
+            padding: 64px;
+            text-align: center;
+            cursor: pointer;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--white);
+            transition: var(--transition);
+            position: relative;
+            min-height: 400px;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: var(--primary-50);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .upload-area h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .upload-area p {
+            color: var(--gray-600);
+            margin-bottom: 16px;
+        }
+
+        .upload-button {
+            background: var(--primary);
+            color: var(--white);
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            font-family: inherit;
+        }
+
+        .upload-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .page-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            background: var(--white);
+            padding: 16px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            background: var(--white);
+            color: var(--gray-700);
+            font-size: 0.875rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn.primary {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        .btn.primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+        }
+
+        .btn.success {
+            background: var(--success);
+            color: var(--white);
+            border-color: var(--success);
+        }
+
+        .btn.danger {
+            background: var(--danger);
+            color: var(--white);
+            border-color: var(--danger);
+        }
+
+        .canvas-container {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-xl);
+            overflow: auto;
+            background: var(--white);
+            position: relative;
+            flex: 1;
+            box-shadow: var(--shadow-sm);
+        }
+
+        #pdf-canvas {
+            cursor: crosshair;
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .controls {
+            padding: 24px;
+            background: var(--white);
+            overflow-y: auto;
+            border-left: 1px solid var(--gray-100);
+        }
+
+        .coordinate-input {
+            margin-bottom: 20px;
+        }
+
+        .coordinate-input label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 0.875rem;
+        }
+
+        .coordinate-input input,
+        .coordinate-input select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            background: var(--white);
+            color: var(--gray-900);
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .coordinate-input input:focus,
+        .coordinate-input select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-100);
+        }
+
+        .extracted-text {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--gray-700);
+            white-space: pre-wrap;
+            transition: var(--transition);
+        }
+
+        .extracted-text.has-text {
+            border-color: var(--success);
+            background: var(--success-50);
+        }
+
+        .info-panel {
+            background: var(--primary-50);
+            border: 1px solid var(--primary-200);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-panel h3 {
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .info-panel p {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        .info-panel a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .info-panel a:hover {
+            text-decoration: underline;
+        }
+
+        .status {
+            padding: 12px 16px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 16px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            border: 1px solid;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status.success {
+            background: var(--success-50);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .status.error {
+            background: var(--danger-50);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .status.info {
+            background: var(--primary-50);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .status.warning {
+            background: var(--warning-50);
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-buttons .btn {
+            flex: 1;
+            min-width: 100px;
+            justify-content: center;
+        }
+
+        .validation-message {
+            background: var(--warning-50);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            padding: 12px;
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* GitHub-specific styles */
+        .github-configured {
+            border-color: var(--success) !important;
+            background: var(--success-50) !important;
+        }
+
+        .github-not-configured {
+            border-color: var(--warning) !important;
+            background: var(--warning-50) !important;
+        }
+
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        .modal.hidden {
+            display: none !important;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 650px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-16px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .generation-option {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 15px;
+        }
+
+        .generation-option:hover {
+            border-color: var(--primary) !important;
+            background: var(--primary-50) !important;
+        }
+
+        .generation-option input:checked + div {
+            color: var(--primary) !important;
+        }
+
+        .generation-option:has(input:checked) {
+            border-color: var(--primary) !important;
+            background: var(--primary-50) !important;
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+
+            .controls {
+                max-height: 40vh;
+                border-left: none;
+                border-top: 1px solid var(--gray-200);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 24px 16px;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .pdf-viewer, .controls {
+                padding: 16px;
+            }
+
+            .modal-content {
+                max-width: 95%;
+                margin: 12px;
+                padding: 24px;
+            }
+        }
+    </style>
 </head>
 <body>
+
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div style="text-align: center;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loading-text">Processing...</div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
-            <h1>📄 OkayDocay Enhanced Config Generator</h1>
-            <p>Create PDF field configurations with mathematical logic for validation - Multi-user session support</p>
-            <div id="session-indicator" style="font-size: 0.75rem; color: var(--gray-500); margin-top: 0.5rem;">
-                Loading session...
+            <h1> OkayDocay </h1>
+            <p>Advanced PDF Configuration Maker with GitHub Integration - Create text, signature, and checkbox fields with automatic transformation scripts</p>
+
+            <div class="step-indicator">
+                <div class="step" id="step-upload">
+                    <span>📁</span> Upload PDF
+                </div>
+                <div class="step" id="step-navigate">
+                    <span>🧭</span> Navigate
+                </div>
+                <div class="step" id="step-select">
+                    <span>🎯</span> Configure
+                </div>
+                <div class="step" id="step-extract">
+                    <span>⚙️</span> Generate
+                </div>
             </div>
         </div>
 
-        <div id="status-area"></div>
-
-        <div class="main-grid">
-            <!-- Left Panel: Form Configuration -->
-            <div class="panel">
-                <h2>🏗️ Form Configuration</h2>
-
-                <div class="tabs">
-                    <div class="tab active" onclick="switchTab('fields')">📝 Fields</div>
-                    <div class="tab" onclick="switchTab('logic')">⚙️ Logic</div>
-                    <div class="tab" onclick="switchTab('import')">📥 Import</div>
-                </div>
-
-                <!-- Fields Tab -->
-                <div id="fields-tab" class="tab-content active">
-                    <div class="form-group">
-                        <label>📋 Form Name:</label>
-                        <input type="text" id="form-name" placeholder="e.g., Invoice Form, Tax Return, Contract">
-                    </div>
-
-                    <div class="form-group">
-                        <label>📄 Description:</label>
-                        <textarea id="form-description" rows="2" placeholder="Brief description of this form"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>📝 Field Name:</label>
-                        <input type="text" id="field-name" placeholder="e.g., total_amount, tax_rate, due_date">
-                    </div>
-
-                    <div class="form-group">
-                        <label>🏷️ Data Type:</label>
-                        <select id="field-type">
-                            <option value="text">📝 Text</option>
-                            <option value="number">🔢 Number</option>
-                            <option value="currency">💰 Currency</option>
-                            <option value="date">📅 Date</option>
-                            <option value="percentage">📊 Percentage</option>
-                            <option value="boolean">✅ Boolean</option>
-                            <option value="signature">✍️ Signature</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>📍 Coordinates (x1,y1,x2,y2):</label>
-                        <input type="text" id="field-coordinates" placeholder="100,200,400,230">
-                    </div>
-
-                    <div class="form-group">
-                        <label>📄 Page Number:</label>
-                        <input type="number" id="field-page" value="1" min="1">
-                    </div>
-
-                    <div class="form-group">
-                        <label>📋 Field Description:</label>
-                        <input type="text" id="field-description" placeholder="Brief description of this field">
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn primary" onclick="addField()">➕ Add Field</button>
-                        <button class="btn" onclick="clearFields()">🗑️ Clear All Fields</button>
+        <div class="main-content">
+            <div class="pdf-viewer">
+                <div class="upload-area" id="upload-area" onclick="document.getElementById('pdf-file').click()">
+                    <input type="file" id="pdf-file" class="file-input" accept=".pdf">
+                    <div class="upload-content">
+                        <div class="upload-icon">📁</div>
+                        <h3>Upload Your PDF File</h3>
+                        <p>Click here or drag and drop your PDF file</p>
+                        <p style="margin: 10px 0; font-size: 13px; opacity: 0.7;">Supports files up to 100MB</p>
+                        <button class="upload-button" type="button">Choose PDF File</button>
                     </div>
                 </div>
 
-                <!-- Logic Tab -->
-                <div id="logic-tab" class="tab-content">
-                    <div class="form-group">
-                        <label>⚙️ Validation Logic (JavaScript):</label>
-                        <textarea id="logic-script" class="logic-editor" placeholder="// Write JavaScript validation logic here
-// Available variables: fields (object with field values)
-// Return object with calculated values and validations
-
-function validateForm(fields) {
-    const result = {
-        calculated: {},
-        validations: []
-    };
-
-    // Example: Calculate total with tax
-    if (fields.subtotal && fields.tax_rate) {
-        result.calculated.total = fields.subtotal * (1 + fields.tax_rate / 100);
-    }
-
-    // Example: Validation rule
-    if (fields.total && fields.total < 0) {
-        result.validations.push({
-            field: 'total',
-            message: 'Total cannot be negative',
-            severity: 'error'
-        });
-    }
-
-    return result;
-}"></textarea>
+                <div id="pdf-controls" class="hidden">
+                    <div class="page-controls">
+                        <button class="btn" id="prev-page" disabled>← Prev</button>
+                        <span id="page-info">Page 1 of 1</span>
+                        <button class="btn" id="next-page" disabled>Next →</button>
+                        <button class="btn" id="zoom-out">Zoom Out</button>
+                        <span style="background: var(--gray-100); color: var(--gray-700); padding: 8px 12px; border-radius: var(--radius); font-size: 0.875rem; font-weight: 500;" id="zoom-info">100%</span>
+                        <button class="btn" id="zoom-in">Zoom In</button>
+                        <button class="btn" id="reset-zoom">Reset</button>
                     </div>
 
-                    <div class="form-group">
-                        <label>🧪 Test Data (JSON):</label>
-                        <textarea id="test-data" rows="4" placeholder='{"subtotal": 100, "tax_rate": 10}'></textarea>
+                    <div class="canvas-container" id="canvas-container">
+                        <img id="pdf-canvas" alt="PDF Page" style="display: block; max-width: none; cursor: crosshair;">
                     </div>
+                </div>
+            </div>
 
-                    <div class="button-group">
-                        <button class="btn primary" onclick="testLogic()">🧪 Test Logic</button>
-                        <button class="btn" onclick="loadLogicTemplate()">📋 Load Template</button>
-                    </div>
+            <div class="controls">
+                <div id="status-area"></div>
 
-                    <div id="logic-test-result" class="hidden">
-                        <h4>Test Results:</h4>
-                        <div id="logic-output" class="json-preview"></div>
+                <!-- GitHub Configuration Status -->
+                <div id="github-status" class="info-panel" style="margin-bottom: 20px; display: none;">
+                    <h3 style="color: var(--success); margin-bottom: 8px;">🐙 GitHub Integration</h3>
+                    <div id="github-status-content">
+                        <p style="font-size: 0.875rem; color: var(--gray-700);">Checking GitHub configuration...</p>
                     </div>
                 </div>
 
-                <!-- Import Tab -->
-                <div id="import-tab" class="tab-content">
-                    <div class="form-group">
-                        <label>📥 Import Existing Configuration:</label>
-                        <div class="upload-area" id="json-upload-area" onclick="document.getElementById('json-file').click()">
-                            <input type="file" id="json-file" accept=".json" style="display: none;" onchange="importConfiguration(event)">
-                            <div>📄 Click to upload JSON configuration</div>
-                            <div style="font-size: 0.875rem; color: var(--gray-500); margin-top: 0.5rem;">
-                                Upload existing config to modify or use as template
+                <!-- 1. Live Extracted Text -->
+                <div>
+                    <label>📄 Extracted Text:</label>
+                    <div class="extracted-text" id="extracted-text">
+                        Text will appear here after selection...
+                    </div>
+                </div>
+
+                <!-- 2. Field Type Selection -->
+                <div class="coordinate-input">
+                    <label>🎛️ Field Type:</label>
+                    <select id="field-type">
+                        <option value="text">📝 Text Field</option>
+                        <option value="signature">✍️ Signature Field</option>
+                        <option value="checkbox">☑️ Checkbox Field</option>
+                    </select>
+                </div>
+
+                <!-- 3. Page Selection -->
+                <div class="coordinate-input">
+                    <label>📄 Target Page:</label>
+                    <select id="target-page" disabled>
+                        <option value="1">Page 1</option>
+                    </select>
+                </div>
+
+                <!-- 4. Field Name Input -->
+                <div class="coordinate-input">
+                    <label>📝 Field Name:</label>
+                    <input type="text" id="field-name" placeholder="e.g., customer_name, invoice_number, signature_1">
+                </div>
+
+                <!-- 5. Normal Field Controls (Text/Signature) -->
+                <div id="normal-field-controls">
+                    <div class="coordinate-input">
+                        <label>📍 Selected Coordinates:</label>
+                        <input type="text" id="current-coords" readonly placeholder="Select area on PDF first">
+                    </div>
+
+                    <div class="validation-message hidden" id="field-validation">Please enter a field name</div>
+
+                    <div class="control-buttons">
+                        <button class="btn primary" id="add-field-btn" disabled>➕ Add Field</button>
+                        <button class="btn" id="preview-field-btn" disabled>👁️ Preview</button>
+                    </div>
+                </div>
+
+                <!-- 6. Checkbox Options Container -->
+                <div id="checkbox-options-container" class="hidden">
+                    <div class="info-panel" style="background: rgba(147, 51, 234, 0.05); border-color: rgba(147, 51, 234, 0.2);">
+                        <h3 style="color: #9333ea;">☑️ Checkbox Field Mode</h3>
+                        <p>Select areas for each checkbox option. You can add multiple options across different pages.</p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                        <div>
+                            <label>📝 Option Name:</label>
+                            <input type="text" id="checkbox-option-name" placeholder="e.g., Cash, Credit Card, Bank Transfer">
+                        </div>
+                        <div>
+                            <label>📍 Selected Coordinates:</label>
+                            <input type="text" id="checkbox-coords" readonly placeholder="Select area on PDF first">
+                        </div>
+                    </div>
+
+                    <div class="control-buttons">
+                        <button class="btn primary" id="add-checkbox-option-btn" disabled>➕ Add Option</button>
+                        <button class="btn" id="preview-checkbox-btn" disabled>👁️ Preview Area</button>
+                    </div>
+
+                    <!-- Checkbox Options List -->
+                    <div>
+                        <label>☑️ Checkbox Options:</label>
+                        <div class="extracted-text" id="checkbox-options-list" style="max-height: 150px; font-family: inherit;">
+                            <div style="text-align: center; opacity: 0.7; font-style: italic;">
+                                No options added yet. Select areas and add options above.
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>📋 Or Paste JSON:</label>
-                        <textarea id="json-paste" rows="10" placeholder='Paste your JSON configuration here...
-{
-  "form_name": "Example Form",
-  "fields": [...],
-  "logic_script": "..."
-}'></textarea>
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn primary" onclick="importFromPaste()">📥 Import from Paste</button>
-                        <button class="btn" onclick="clearImport()">🗑️ Clear</button>
+                    <div class="control-buttons" style="margin-top: 20px;">
+                        <button class="btn success" id="finish-checkbox-btn" disabled>✅ Finish Checkbox Field</button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Right Panel: Preview and Export -->
-            <div class="panel">
-                <h2>👁️ Configuration Preview</h2>
-
-                <div class="form-group">
-                    <label>📋 Defined Fields:</label>
-                    <div id="fields-list" class="field-list">
-                        <div style="text-align: center; color: var(--gray-500); font-style: italic;">
-                            No fields defined yet. Add fields using the form on the left.
+                <!-- 7. Fields List -->
+                <div>
+                    <label>🎯 Defined Fields:</label>
+                    <div id="fields-list" class="extracted-text" style="max-height: 200px; font-family: inherit;">
+                        <div style="text-align: center; opacity: 0.7; font-style: italic;">
+                            No fields defined yet. Add fields using the controls above.
                         </div>
                     </div>
                 </div>
 
-                <div class="button-group">
-                    <button class="btn success" onclick="generateConfig()" disabled id="generate-btn">⚙️ Generate Config</button>
-                    <button class="btn primary" onclick="downloadConfig()" disabled id="download-btn">💾 Download JSON</button>
-                    <button class="btn" onclick="generateFormTemplate()" disabled id="form-template-btn">📝 Generate Form</button>
+                <!-- 8. Enhanced Generate Config with GitHub Integration -->
+                <div class="control-buttons" style="margin-top: 20px;">
+                    <button class="btn danger" id="clear-fields-btn" disabled>🗑️ Clear All</button>
+                    <button class="btn success" id="generate-config-btn" disabled>⚙️ Generate Config</button>
                 </div>
 
-                <div class="button-group">
-                    <button class="btn success" onclick="saveConfigPermanently()">💾 Save to Session</button>
-                    <button class="btn" onclick="clearCurrentConfig()">🗑️ Clear Current</button>
+                <!-- Hidden legacy controls for backward compatibility -->
+                <div style="display: none;">
+                    <input type="number" id="pdf_x1" step="0.1">
+                    <input type="number" id="pdf_y1" step="0.1">
+                    <input type="number" id="pdf_x2" step="0.1">
+                    <input type="number" id="pdf_y2" step="0.1">
+                    <input type="text" id="coord-input">
+                    <button id="extract-btn">Extract</button>
+                    <button id="show-area-btn">Show</button>
+                    <button id="clear-selection-btn">Clear</button>
+                    <input type="text" id="search-text">
+                    <button id="search-btn">Search</button>
+                    <button id="export-btn">Export</button>
+                    <button id="analyze-layout-btn">Layout</button>
                 </div>
 
-                <div class="form-group">
-                    <label>📄 JSON Preview:</label>
-                    <div id="json-preview" class="json-preview">
-                        Configuration will appear here after adding fields...
+                <!-- Hidden config section (required by JavaScript) -->
+                <div id="config-section" style="display: none;">
+                    <h3>⚙️ Configuration Maker</h3>
+                </div>
+                <div id="config-controls" class="hidden"></div>
+
+                <!-- Debug Info -->
+                <div id="coordinate-debug" class="hidden" style="background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 12px; margin-bottom: 16px; font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.5; color: var(--gray-600);">
+                    <strong>🔧 Debug Info:</strong><br>
+                    <span id="debug-info">No coordinates selected</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Config Generation Modal with GitHub Integration -->
+    <div id="config-generation-modal" class="modal hidden">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: var(--primary); margin: 0;">⚙️ Generate Configuration</h3>
+                <button id="close-modal-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-500);">&times;</button>
+            </div>
+
+            <!-- Step 1: Choose Generation Type -->
+            <div id="generation-step-1">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gray-700); margin-bottom: 10px;">Choose Generation Type:</h4>
+
+                    <div>
+                        <!-- Option 1: Config Only -->
+                        <label class="generation-option">
+                            <input type="radio" name="generation_type" value="config_only" checked style="margin-right: 12px;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--gray-700);">📄 Configuration Only</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-500); margin-top: 4px;">Generate just the field configuration JSON</div>
+                            </div>
+                        </label>
+
+                        <!-- Option 2: Config + Script -->
+                        <label class="generation-option">
+                            <input type="radio" name="generation_type" value="config_with_script" style="margin-right: 12px;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--gray-700);">🔧 Configuration + Transformer Script</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-500); margin-top: 4px;">Generate config JSON plus Python transformation script</div>
+                            </div>
+                        </label>
+
+                        <!-- Option 3: Populated Config -->
+                        <label class="generation-option">
+                            <input type="radio" name="generation_type" value="populated_config" style="margin-right: 12px;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--gray-700);">📝 Populated Configuration</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-500); margin-top: 4px;">Generate config with sample data pre-filled</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- GitHub Integration Option -->
+                    <div id="github-integration-section" style="margin-top: 20px; padding: 15px; background: var(--github-50); border: 1px solid var(--github); border-radius: 8px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                            <input type="checkbox" id="upload-to-github" style="margin-right: 10px;">
+                            <label for="upload-to-github" style="font-weight: 600; color: var(--github); cursor: pointer;">🐙 Upload to GitHub Repository</label>
+                        </div>
+                        <div style="font-size: 0.875rem; color: var(--gray-600);" id="github-option-description">
+                            Automatically upload generated files to your configured GitHub repository
+                        </div>
+                        <div id="github-repo-info" style="margin-top: 8px; font-size: 0.8rem; color: var(--success); display: none;">
+                            <span>📂 Repository: </span><span id="repo-display"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-buttons">
+                    <button class="btn" id="cancel-generation-btn">Cancel</button>
+                    <button class="btn primary" id="continue-generation-btn">Continue →</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Simple JSON Input -->
+            <div id="generation-step-2" class="hidden">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--gray-700); margin-bottom: 10px;">💡 Simple JSON Data Input</h4>
+                    <p style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 15px;">
+                        Enter your simple JSON data. This will be transformed and included in the configuration.
+                    </p>
+
+                    <!-- Example Format Helper -->
+                    <div style="background: var(--primary-50); border: 1px solid var(--primary); border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">📖 Expected Format:</div>
+                        <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--gray-600);" id="format-example">
+                            Loading format example...
+                        </div>
+                    </div>
+
+                    <textarea
+                        id="simple-json-input"
+                        placeholder="Enter your simple JSON data here..."
+                        style="width: 100%; height: 200px; font-family: var(--font-mono); font-size: 12px; background: var(--white); border: 1px solid var(--gray-300); border-radius: 6px; padding: 12px; resize: vertical;"
+                    ></textarea>
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn" id="load-example-data-btn">📄 Load Example</button>
+                        <button class="btn" id="validate-json-btn">✅ Validate JSON</button>
+                        <button class="btn" id="clear-json-btn">🗑️ Clear</button>
+                    </div>
+
+                    <div id="json-validation-result" class="hidden" style="margin-top: 10px;"></div>
+
+                    <!-- GitHub option reminder -->
+                    <div id="github-reminder" style="margin-top: 15px; padding: 10px; background: var(--github-50); border-radius: 6px; display: none;">
+                        <div style="font-size: 0.875rem; color: var(--github);">
+                            🐙 <strong>GitHub Upload:</strong> <span id="github-reminder-text">Enabled</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-buttons">
+                    <button class="btn" id="back-generation-btn">← Back</button>
+                    <button class="btn primary" id="generate-final-btn">🚀 Generate</button>
+                </div>
+            </div>
+
+            <!-- Processing State -->
+            <div id="generation-processing" class="hidden" style="text-align: center; padding: 40px;">
+                <div class="loading-spinner" style="margin: 0 auto 20px;"></div>
+                <div style="color: var(--gray-700); font-weight: 600;">Generating your configuration...</div>
+                <div style="color: var(--gray-600); font-size: 0.875rem; margin-top: 8px;" id="processing-status">Preparing files...</div>
+            </div>
+
+            <!-- Success State -->
+            <div id="generation-success" class="hidden" style="text-align: center; padding: 40px;">
+                <div style="font-size: 48px; margin-bottom: 20px;">🎉</div>
+                <div style="color: var(--success); font-weight: 600; font-size: 1.125rem; margin-bottom: 10px;">Configuration Generated Successfully!</div>
+                <div style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 20px;" id="success-details">Your files are ready for download.</div>
+
+                <!-- GitHub Success Info -->
+                <div id="github-success-info" style="display: none; background: var(--github-50); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <div style="color: var(--github); font-weight: 600; margin-bottom: 8px;">🐙 Uploaded to GitHub!</div>
+                    <div style="font-size: 0.875rem; color: var(--gray-700); margin-bottom: 10px;" id="github-upload-details">Files uploaded successfully to your repository.</div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <a id="github-view-link" href="#" target="_blank" class="btn primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                            👁️ View on GitHub
+                        </a>
+                        <a id="github-download-link" href="#" target="_blank" class="btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                            📥 Direct Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Download Action Buttons (for non-GitHub downloads) -->
+                <div id="download-actions" class="hidden" style="margin-top: 20px;">
+                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn primary" id="download-files-btn" style="display: inline-flex; align-items: center; gap: 8px;">
+                            📥 Download Files
+                        </button>
+                        <button class="btn" id="upload-to-github-later-btn" style="display: inline-flex; align-items: center; gap: 8px;">
+                            🐙 Upload to GitHub
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Saved Configurations Panel -->
-        <div class="panel" style="margin-top: 2rem;">
-            <h2>💾 Your Saved Configurations</h2>
-
-            <div class="button-group">
-                <button class="btn" onclick="loadSavedConfigs()">🔄 Refresh</button>
-                <button class="btn" onclick="exportAllConfigs()">📤 Export All</button>
-                <button class="btn danger" onclick="clearAllConfigs()">🗑️ Clear All</button>
-            </div>
-
-            <div id="saved-configs" class="field-list">
-                <div style="text-align: center; color: var(--gray-500); font-style: italic;">
-                    Loading your saved configurations...
-                </div>
-            </div>
-        </div>
-
-        <!-- Session Management Panel -->
-        <div class="panel" style="margin-top: 2rem;">
-            <h2>👤 Session Information</h2>
-            <div id="session-details" style="font-family: var(--font-mono); font-size: 0.875rem; color: var(--gray-600);">
-                Loading session information...
-            </div>
-            <div class="button-group" style="margin-top: 1rem;">
-                <button class="btn" onclick="loadSessionInfo()">🔄 Refresh Session</button>
-                <button class="btn" onclick="showSessionHelp()">❓ Help</button>
-            </div>
-        </div>
     </div>
 
-    <!-- Session Help Modal -->
-    <div id="session-help-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 2rem; border-radius: var(--radius); max-width: 600px; margin: 2rem;">
-            <h3>🔒 Session-Based Configuration Management</h3>
-            <p style="margin: 1rem 0;">Your configurations are automatically saved to your browser session. Here's what you need to know:</p>
-            <ul style="margin: 1rem 0; padding-left: 2rem;">
-                <li><strong>Auto-save:</strong> Your current work is automatically saved every 30 seconds</li>
-                <li><strong>Session isolation:</strong> Your configurations are private to your session</li>
-                <li><strong>Session duration:</strong> Sessions last for 2 hours of inactivity</li>
-                <li><strong>Data persistence:</strong> Use "Save to Session" to permanently save configurations</li>
-                <li><strong>Export:</strong> Download configurations as JSON files for external storage</li>
-            </ul>
-            <button class="btn primary" onclick="hideSessionHelp()">Got it!</button>
-        </div>
-    </div>
 
-    <script src="{{ url_for('static', filename='config_script.js') }}"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 
-    <script>
-        // Additional session management functions
-        async function loadSessionInfo() {
-            try {
-                const response = await fetch('/api/session-info');
-                const result = await response.json();
-
-                if (result.success) {
-                    sessionInfo = result;
-
-                    // Update session indicator in header
-                    const indicator = document.getElementById('session-indicator');
-                    indicator.innerHTML = `Session: ${result.session_id} | Configs: ${result.configurations_count} | Auto-save enabled`;
-
-                    // Update session details panel
-                    const details = document.getElementById('session-details');
-                    details.innerHTML = `
-                        <div><strong>Session ID:</strong> ${result.session_id}</div>
-                        <div><strong>Created:</strong> ${new Date(result.created_at).toLocaleString()}</div>
-                        <div><strong>Last Activity:</strong> ${new Date(result.last_accessed).toLocaleString()}</div>
-                        <div><strong>Saved Configurations:</strong> ${result.configurations_count}</div>
-                        <div><strong>Temporary Files:</strong> ${result.temp_files}</div>
-                        <div style="margin-top: 1rem; padding: 0.5rem; background: var(--gray-50); border-radius: var(--radius);">
-                            <small><strong>Current Config:</strong> ${result.current_config.form_name || 'Untitled'} (${result.current_config.fields.length} fields)</small>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Failed to load session info:', error);
-            }
-        }
-
-        function showSessionHelp() {
-            document.getElementById('session-help-modal').classList.remove('hidden');
-        }
-
-        function hideSessionHelp() {
-            document.getElementById('session-help-modal').classList.add('hidden');
-        }
-
-        // Auto-refresh session info every 5 minutes
-        setInterval(loadSessionInfo, 300000);
-
-        // Load session info on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(loadSessionInfo, 1000); // Delay to let main initialization complete
-        });
-    </script>
 </body>
 </html>
