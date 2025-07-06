@@ -1,7 +1,3 @@
-/* ================================
-   OKAYDOCAY ENHANCED - BETTER LIGHT THEME CSS
-   Modern, Clean & Beautiful PDF Configuration Maker
-   ================================ */
 
 * {
     margin: 0;
@@ -10,12 +6,16 @@
 }
 
 :root {
-    /* Better Light Theme Color Palette */
+    /* Enhanced Color Palette */
     --primary: #4f46e5;
     --primary-light: #6366f1;
     --primary-dark: #3730a3;
+    --primary-25: #fafaff;
     --primary-50: #eef2ff;
     --primary-100: #e0e7ff;
+    --primary-200: #c7d2fe;
+    --primary-300: #a5b4fc;
+    --primary-400: #818cf8;
     --primary-500: #6366f1;
     --primary-600: #4f46e5;
     --primary-700: #4338ca;
@@ -23,32 +23,52 @@
     --success: #10b981;
     --success-50: #ecfdf5;
     --success-100: #d1fae5;
+    --success-200: #a7f3d0;
+    --success-300: #6ee7b7;
     --success-500: #10b981;
     --success-600: #059669;
+    --success-700: #047857;
 
     --warning: #f59e0b;
     --warning-50: #fffbeb;
     --warning-100: #fef3c7;
+    --warning-200: #fde68a;
     --warning-500: #f59e0b;
     --warning-600: #d97706;
+    --warning-700: #b45309;
 
     --danger: #ef4444;
     --danger-50: #fef2f2;
     --danger-100: #fee2e2;
+    --danger-200: #fecaca;
     --danger-500: #ef4444;
     --danger-600: #dc2626;
+    --danger-700: #b91c1c;
 
     --checkbox: #8b5cf6;
-    --checkbox-50: #f5f3ff;
+    --checkbox-50: #faf5ff;
+    --checkbox-100: #f3e8ff;
+    --checkbox-200: #e9d5ff;
+    --checkbox-300: #d8b4fe;
     --checkbox-500: #8b5cf6;
     --checkbox-600: #7c3aed;
+    --checkbox-700: #6d28d9;
 
     --signature: #f97316;
     --signature-50: #fff7ed;
+    --signature-100: #ffedd5;
+    --signature-200: #fed7aa;
+    --signature-300: #fdba74;
     --signature-500: #f97316;
     --signature-600: #ea580c;
+    --signature-700: #c2410c;
 
-    /* Better Gray Scale */
+    --github: #0891b2;
+    --github-50: #ecfeff;
+    --github-100: #cffafe;
+    --github-200: #a5f3fc;
+
+    /* Enhanced Gray Scale */
     --white: #ffffff;
     --gray-25: #fcfcfd;
     --gray-50: #f9fafb;
@@ -63,25 +83,24 @@
     --gray-800: #1f2937;
     --gray-900: #111827;
 
-    /* Enhanced Typography */
+    /* Typography */
     --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
     --font-display: 'Inter', system-ui, sans-serif;
 
-    /* Better Spacing System */
+    /* Spacing System */
     --space-0: 0;
-    --space-1: 0.25rem;    /* 4px */
-    --space-2: 0.5rem;     /* 8px */
-    --space-3: 0.75rem;    /* 12px */
-    --space-4: 1rem;       /* 16px */
-    --space-5: 1.25rem;    /* 20px */
-    --space-6: 1.5rem;     /* 24px */
-    --space-7: 1.75rem;    /* 28px */
-    --space-8: 2rem;       /* 32px */
-    --space-10: 2.5rem;    /* 40px */
-    --space-12: 3rem;      /* 48px */
-    --space-16: 4rem;      /* 64px */
-    --space-20: 5rem;      /* 80px */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-20: 5rem;
 
     /* Enhanced Shadow System */
     --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -92,7 +111,7 @@
     --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
-    /* Better Border Radius */
+    /* Border Radius */
     --radius-xs: 0.125rem;
     --radius-sm: 0.25rem;
     --radius: 0.375rem;
@@ -103,7 +122,7 @@
     --radius-3xl: 2rem;
     --radius-full: 9999px;
 
-    /* Smooth Transitions */
+    /* Transitions */
     --transition-fast: all 0.1s ease;
     --transition: all 0.2s ease;
     --transition-slow: all 0.3s ease;
@@ -111,13 +130,7 @@
 
     /* Z-Index Scale */
     --z-dropdown: 1000;
-    --z-sticky: 1020;
-    --z-fixed: 1030;
-    --z-modal-backdrop: 1040;
     --z-modal: 1050;
-    --z-popover: 1060;
-    --z-tooltip: 1070;
-    --z-toast: 1080;
 }
 
 /* ================================
@@ -933,6 +946,16 @@ body {
    ================================ */
 
 .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     animation: modalFadeIn 0.2s ease;
 }
 
@@ -957,6 +980,11 @@ body {
     border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-2xl);
     border: 1px solid var(--gray-200);
+    padding: 30px;
+    max-width: 750px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 @keyframes modalSlideIn {
@@ -970,65 +998,480 @@ body {
     }
 }
 
-.generation-option {
-    transition: var(--transition);
-    cursor: pointer;
+/* ================================
+   ENHANCED FIELD REFERENCE PANEL
+   ================================ */
+
+#fields-reference-panel {
+    background: linear-gradient(135deg, var(--primary-50) 0%, var(--white) 100%);
+    border: 1px solid var(--primary-200);
     border-radius: var(--radius-lg);
+    padding: 15px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
 }
 
-.generation-option:hover {
-    border-color: var(--primary-300) !important;
-    background: var(--primary-25) !important;
+#fields-reference-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-500), var(--checkbox-500), var(--signature-500));
+}
+
+.reference-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.reference-panel-title {
+    color: var(--primary-700);
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#toggle-reference-btn {
+    background: var(--primary-100);
+    border: none;
+    color: var(--primary-700);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+#toggle-reference-btn:hover {
+    background: var(--primary-200);
     transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
 }
 
-.generation-option input:checked + div {
-    color: var(--primary-700) !important;
+.reference-description {
+    font-size: 0.8rem;
+    color: var(--gray-600);
+    margin-bottom: 10px;
+    line-height: 1.4;
 }
 
-.generation-option:has(input:checked) {
-    border-color: var(--primary) !important;
-    background: var(--primary-50) !important;
-    box-shadow: var(--shadow-sm);
+#fields-reference-list {
+    background: var(--white);
+    border-radius: 6px;
+    padding: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--gray-200);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom scrollbar for reference list */
+#fields-reference-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#fields-reference-list::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 3px;
+}
+
+#fields-reference-list::-webkit-scrollbar-thumb {
+    background: var(--primary-300);
+    border-radius: 3px;
+}
+
+#fields-reference-list::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-400);
+}
+
+/* Field reference container */
+.field-reference-container {
+    font-family: var(--font-primary);
+    line-height: 1.4;
+}
+
+.page-section {
+    margin-bottom: 16px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--white);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    animation: pageSectionAppear 0.4s ease;
+}
+
+.page-section:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.page-header {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: var(--white);
+    padding: 10px 15px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.fields-grid {
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.field-block {
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    padding: 12px;
+    background: var(--gray-25);
+    transition: all 0.2s ease;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    animation: fieldBlockAppear 0.3s ease;
+}
+
+.field-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--gray-300);
+    transition: all 0.2s ease;
+}
+
+.field-block:hover {
+    border-color: var(--primary-300);
+    background: var(--primary-50);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.field-block.text-field::before {
+    background: var(--primary-500);
+}
+
+.field-block.signature-field::before {
+    background: var(--signature-500);
+}
+
+.field-block.signature-field:hover {
+    border-color: var(--signature-300);
+    background: var(--signature-50);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+}
+
+.field-block.checkbox-field::before {
+    background: var(--checkbox-500);
+}
+
+.field-block.checkbox-field:hover {
+    border-color: var(--checkbox-300);
+    background: var(--checkbox-50);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+.field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.field-name {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--gray-800);
+    background: var(--white);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--gray-200);
+    word-break: break-all;
+    flex: 1;
+    margin-right: 8px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.field-type {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.field-type.text {
+    background: var(--primary-100);
+    color: var(--primary-700);
+}
+
+.field-type.signature {
+    background: var(--signature-100);
+    color: var(--signature-700);
+}
+
+.field-type.checkbox {
+    background: var(--checkbox-100);
+    color: var(--checkbox-700);
+}
+
+.copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--gray-600);
+    transition: all 0.15s ease;
+    opacity: 0;
+    transform: scale(0.9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.field-block:hover .copy-button {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.copy-button:hover {
+    background: var(--primary-500);
+    color: var(--white);
+    border-color: var(--primary-500);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    transform: scale(1.05);
+}
+
+.copy-button.copied {
+    background: var(--success-500);
+    color: var(--white);
+    border-color: var(--success-500);
+    animation: copySuccess 0.3s ease;
+}
+
+.checkbox-options {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--gray-200);
+}
+
+.checkbox-option {
+    font-size: 0.7rem;
+    color: var(--gray-600);
+    margin: 3px 0;
+    padding: 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.3;
+}
+
+.checkbox-option::before {
+    content: "☑️";
+    font-size: 0.6rem;
+    flex-shrink: 0;
+}
+
+.usage-examples {
+    margin-top: 16px;
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 15px;
+    position: relative;
+}
+
+.usage-examples::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--warning-500), var(--success-500));
+}
+
+.usage-title {
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.usage-code {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--gray-700);
+    background: var(--white);
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--gray-200);
+    margin: 4px 0;
+    word-break: break-all;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.usage-code:hover {
+    border-color: var(--primary-300);
+    background: var(--primary-25);
+    transform: translateY(-1px);
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    color: var(--gray-500);
+    font-style: italic;
+    padding: 30px 20px;
+}
+
+.empty-state-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.7;
+}
+
+.empty-state-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.empty-state-subtitle {
+    font-size: 0.8rem;
+    opacity: 0.8;
 }
 
 /* ================================
-   TEXTAREA ENHANCEMENTS
+   SCRIPT EDITOR STYLES
    ================================ */
 
-textarea {
-    font-family: var(--font-mono);
-    resize: vertical;
-    transition: var(--transition-colors);
-    border-radius: var(--radius-lg);
+.script-editor {
+    margin-bottom: 20px;
 }
 
-textarea:focus {
+.script-editor label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--gray-900);
+    font-size: 0.875rem;
+}
+
+.script-editor textarea {
+    width: 100%;
+    height: 200px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    padding: 12px;
+    resize: vertical;
+    transition: var(--transition);
+}
+
+.script-editor textarea:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--primary-100);
 }
 
-#simple-json-input {
-    background: var(--gray-50);
-    border: 2px dashed var(--gray-300);
-    transition: var(--transition);
-    font-size: 0.8rem;
+.script-editor .script-info {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: 4px;
 }
 
-#simple-json-input:focus {
-    background: var(--white);
-    border-style: solid;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-100);
+/* ================================
+   GITHUB-SPECIFIC STYLES
+   ================================ */
+
+.github-configured {
+    border-color: var(--success) !important;
+    background: var(--success-50) !important;
 }
 
-#test-output {
-    background: var(--success-50);
-    border-color: var(--success-200);
-    font-size: 0.8rem;
+.github-not-configured {
+    border-color: var(--warning) !important;
+    background: var(--warning-50) !important;
 }
+
+/* ================================
+   ANIMATIONS
+   ================================ */
+
+@keyframes fieldBlockAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes pageSectionAppear {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes copySuccess {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Staggered animations */
+.field-block:nth-child(1) { animation-delay: 0ms; }
+.field-block:nth-child(2) { animation-delay: 50ms; }
+.field-block:nth-child(3) { animation-delay: 100ms; }
+.field-block:nth-child(4) { animation-delay: 150ms; }
+.field-block:nth-child(5) { animation-delay: 200ms; }
+.field-block:nth-child(6) { animation-delay: 250ms; }
 
 /* ================================
    UTILITY CLASSES
@@ -1074,26 +1517,10 @@ textarea:focus {
     background: var(--gray-400);
 }
 
-::-webkit-scrollbar-corner {
-    background: var(--gray-100);
-}
-
 /* Firefox scrollbars */
 * {
     scrollbar-width: thin;
     scrollbar-color: var(--gray-300) var(--gray-100);
-}
-
-/* ================================
-   FOCUS STYLES
-   ================================ */
-
-.btn:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
 }
 
 /* ================================
@@ -1120,609 +1547,3 @@ textarea:focus-visible {
         max-height: 40vh;
         border-left: none;
         border-top: 1px solid var(--gray-200);
-        padding: var(--space-4);
-    }
-
-    .coord-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .header {
-        padding: var(--space-6) var(--space-4);
-    }
-
-    .step-indicator {
-        gap: var(--space-4);
-    }
-
-    .pdf-viewer {
-        padding: var(--space-4);
-    }
-}
-
-@media (max-width: 768px) {
-    .header {
-        padding: var(--space-4) var(--space-3);
-    }
-
-    .header h1 {
-        font-size: 1.75rem;
-    }
-
-    .pdf-viewer, .controls {
-        padding: var(--space-3);
-    }
-
-    .page-controls {
-        gap: var(--space-2);
-        padding: var(--space-3);
-        flex-wrap: wrap;
-    }
-
-    .btn {
-        padding: var(--space-2) var(--space-3);
-        font-size: 0.8rem;
-    }
-
-    .upload-area {
-        padding: var(--space-8) var(--space-4);
-        min-height: 300px;
-    }
-
-    .upload-icon {
-        font-size: 2.5rem;
-    }
-
-    .step-indicator {
-        gap: var(--space-3);
-        flex-wrap: wrap;
-    }
-
-    .step {
-        padding: var(--space-2) var(--space-4);
-        font-size: 0.8rem;
-    }
-
-    .control-buttons {
-        gap: var(--space-2);
-    }
-
-    .control-buttons .btn {
-        min-width: 80px;
-        font-size: 0.8rem;
-    }
-
-    .modal-content {
-        max-width: 95%;
-        margin: var(--space-3);
-        padding: var(--space-4);
-    }
-}
-
-@media (max-width: 480px) {
-    .header {
-        padding: var(--space-3);
-    }
-
-    .header h1 {
-        font-size: 1.5rem;
-    }
-
-    .header p {
-        font-size: 0.8rem;
-    }
-
-    .pdf-viewer, .controls {
-        padding: var(--space-2);
-    }
-
-    .page-controls {
-        padding: var(--space-2);
-        gap: var(--space-1);
-    }
-
-    .btn {
-        padding: var(--space-1) var(--space-2);
-        font-size: 0.75rem;
-        min-width: 60px;
-    }
-
-    .upload-area {
-        padding: var(--space-6) var(--space-3);
-        min-height: 250px;
-    }
-
-    .upload-icon {
-        font-size: 2rem;
-    }
-
-    .step-indicator {
-        gap: var(--space-2);
-    }
-
-    .step {
-        padding: var(--space-1) var(--space-3);
-        font-size: 0.75rem;
-        gap: var(--space-1);
-    }
-
-    .control-buttons .btn {
-        flex: 1;
-        min-width: auto;
-        font-size: 0.75rem;
-        padding: var(--space-2);
-    }
-
-    .coordinate-input input,
-    .coordinate-input select {
-        padding: var(--space-2) var(--space-3);
-        font-size: 0.8rem;
-    }
-
-    .modal-content {
-        max-width: 98%;
-        margin: var(--space-1);
-        padding: var(--space-3);
-        max-height: 95vh;
-        border-radius: var(--radius-xl);
-    }
-
-    .extracted-text {
-        max-height: 150px;
-        font-size: 0.8rem;
-    }
-}
-
-/* ================================
-   BETTER ANIMATIONS
-   ================================ */
-
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideInLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes scaleIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
-}
-
-/* Apply animations */
-.header {
-    animation: slideInDown 0.6s ease-out;
-}
-
-.pdf-viewer {
-    animation: slideInLeft 0.6s ease-out 0.1s both;
-}
-
-.controls {
-    animation: slideInRight 0.6s ease-out 0.2s both;
-}
-
-.coordinate-input {
-    animation: slideInUp 0.4s ease-out var(--delay, 0s) both;
-}
-
-.coordinate-input:nth-child(1) { --delay: 0.1s; }
-.coordinate-input:nth-child(2) { --delay: 0.2s; }
-.coordinate-input:nth-child(3) { --delay: 0.3s; }
-.coordinate-input:nth-child(4) { --delay: 0.4s; }
-.coordinate-input:nth-child(5) { --delay: 0.5s; }
-
-.control-buttons {
-    animation: slideInUp 0.4s ease-out 0.6s both;
-}
-
-.fields-list-item {
-    animation: scaleIn 0.3s ease-out;
-}
-
-.status {
-    animation: slideInLeft 0.3s ease-out;
-}
-
-/* ================================
-   HOVER EFFECTS
-   ================================ */
-
-.btn:hover:not(:disabled) {
-    animation: none;
-}
-
-.upload-area:hover .upload-icon {
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.fields-list-item:hover::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, transparent 0%, rgba(79, 70, 229, 0.02) 50%, transparent 100%);
-    border-radius: inherit;
-    pointer-events: none;
-}
-
-/* ================================
-   LOADING STATES
-   ================================ */
-
-.btn.loading {
-    position: relative;
-    color: transparent;
-}
-
-.btn.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 16px;
-    height: 16px;
-    margin: -8px 0 0 -8px;
-    border: 2px solid currentColor;
-    border-radius: var(--radius-full);
-    border-top-color: transparent;
-    animation: spin 0.8s linear infinite;
-}
-
-/* ================================
-   IMPROVED FORM STATES
-   ================================ */
-
-.coordinate-input input:invalid {
-    border-color: var(--danger);
-    box-shadow: 0 0 0 3px var(--danger-100);
-}
-
-.coordinate-input input:valid {
-    border-color: var(--success);
-}
-
-.coordinate-input.has-error input {
-    border-color: var(--danger);
-    background: var(--danger-50);
-}
-
-.coordinate-input.has-success input {
-    border-color: var(--success);
-    background: var(--success-50);
-}
-
-/* ================================
-   ENHANCED HIGHLIGHTS
-   ================================ */
-
-.highlight-box {
-    animation: highlightFadeIn 0.3s ease-out;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
-}
-
-@keyframes highlightFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 0.8;
-        transform: scale(1);
-    }
-}
-
-.selection-box {
-    animation: selectionPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes selectionPulse {
-    0%, 100% {
-        opacity: 0.7;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.4;
-        transform: scale(1.01);
-    }
-}
-
-/* ================================
-   PRINT STYLES
-   ================================ */
-
-@media print {
-    body {
-        background: white !important;
-        font-size: 12pt;
-        color: black !important;
-    }
-
-    .loading-overlay,
-    .page-controls,
-    .control-buttons,
-    .modal,
-    .btn {
-        display: none !important;
-    }
-
-    .main-content {
-        grid-template-columns: 1fr !important;
-        height: auto !important;
-        box-shadow: none !important;
-    }
-
-    .pdf-viewer {
-        padding: 0 !important;
-        border: none !important;
-    }
-
-    .controls {
-        border: none !important;
-        box-shadow: none !important;
-        page-break-inside: avoid;
-    }
-
-    .header {
-        border-bottom: 2px solid black;
-        padding: 20px 0;
-    }
-
-    * {
-        animation: none !important;
-        transition: none !important;
-        box-shadow: none !important;
-    }
-}
-
-/* ================================
-   ACCESSIBILITY IMPROVEMENTS
-   ================================ */
-
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-
-    .upload-icon,
-    .loading-spinner {
-        animation: none !important;
-    }
-
-    .highlight-box,
-    .selection-box {
-        animation: none !important;
-    }
-}
-
-@media (prefers-contrast: high) {
-    :root {
-        --gray-100: #e0e0e0;
-        --gray-200: #c0c0c0;
-        --gray-300: #a0a0a0;
-        --gray-400: #808080;
-        --gray-500: #606060;
-        --gray-600: #404040;
-        --gray-700: #202020;
-    }
-
-    .btn,
-    .coordinate-input input,
-    .coordinate-input select {
-        border-width: 2px;
-    }
-
-    .highlight-box,
-    .selection-box {
-        border-width: 3px;
-    }
-}
-
-/* ================================
-   THEME VARIATIONS
-   ================================ */
-
-/* Light theme is default, but we can add theme-specific overrides */
-.theme-light {
-    /* Already defined as default */
-}
-
-/* Prepare for potential dark theme toggle */
-.theme-auto {
-    /* Inherits from default light theme */
-}
-
-/* Enhanced focus for better accessibility */
-@media (min-width: 768px) {
-    .btn:focus-visible,
-    input:focus-visible,
-    select:focus-visible,
-    textarea:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: 2px;
-        box-shadow: 0 0 0 4px var(--primary-100);
-    }
-}
-
-/* ================================
-   PERFORMANCE OPTIMIZATIONS
-   ================================ */
-
-.canvas-container {
-    contain: layout style paint;
-    transform: translateZ(0);
-    will-change: scroll-position;
-}
-
-.controls {
-    contain: layout style;
-}
-
-#pdf-canvas {
-    will-change: transform;
-    image-rendering: crisp-edges;
-}
-
-.highlight-box,
-.selection-box {
-    will-change: opacity, transform;
-    contain: layout style paint;
-}
-
-.modal {
-    will-change: opacity, transform;
-    contain: layout style paint;
-}
-
-.btn {
-    contain: layout style;
-}
-
-/* ================================
-   ENHANCED VISUAL HIERARCHY
-   ================================ */
-
-/* Primary headings */
-h1, h2, h3 {
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.025em;
-}
-
-h1 {
-    font-size: 2rem;
-    color: var(--gray-900);
-}
-
-h2 {
-    font-size: 1.5rem;
-    color: var(--gray-800);
-}
-
-h3 {
-    font-size: 1.25rem;
-    color: var(--gray-700);
-}
-
-/* Better spacing for text elements */
-p {
-    line-height: 1.6;
-    color: var(--gray-600);
-}
-
-/* Enhanced code styling */
-code {
-    font-family: var(--font-mono);
-    font-size: 0.875em;
-    background: var(--gray-100);
-    padding: 0.125rem 0.25rem;
-    border-radius: var(--radius-sm);
-    color: var(--gray-800);
-}
-
-/* ================================
-   FINAL TOUCHES
-   ================================ */
-
-/* Smooth scroll for better UX */
-html {
-    scroll-behavior: smooth;
-}
-
-/* Better image rendering */
-img {
-    max-width: 100%;
-    height: auto;
-    image-rendering: crisp-edges;
-}
-
-/* Enhanced selection */
-::selection {
-    background: var(--primary-100);
-    color: var(--primary-700);
-}
-
-::-moz-selection {
-    background: var(--primary-100);
-    color: var(--primary-700);
-}
-
-/* Remove default button styling */
-button {
-    border: none;
-    background: none;
-    padding: 0;
-    font-family: inherit;
-}
-
-/* Better default link styling */
-a {
-    color: var(--primary);
-    text-decoration: none;
-    transition: var(--transition-colors);
-}
-
-a:hover {
-    color: var(--primary-700);
-    text-decoration: underline;
-}
-
-/* ================================
-   END OF BETTER LIGHT THEME CSS
-   ================================ */

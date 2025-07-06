@@ -1,14 +1,3 @@
-// ================================
-// OKAYDOCAY ENHANCED - COMPLETE MERGED JAVASCRIPT
-// PDF Configuration Maker with GitHub Integration
-// All features in one file - no conflicts
-// ================================
-
-// ================================
-// GLOBAL VARIABLES
-// ================================
-
-let currentPdf = null;
 let currentPage = 1;
 let totalPages = 0;
 let isSelecting = false;
@@ -20,15 +9,13 @@ let currentImageDimensions = { width: 0, height: 0 };
 let hasValidSelection = false;
 let fieldDefinitions = [];
 let currentFieldType = 'text';
-let currentCheckboxOptions = [];
-let isAddingCheckboxOption = false;
 
 // GitHub Integration Variables
 let githubConfigured = false;
 let githubRepoInfo = null;
 let pendingDownloadData = null;
 
-// Field types
+// Simplified field types - no complex checkbox options
 const FIELD_TYPES = {
     TEXT: 'text',
     SIGNATURE: 'signature',
@@ -46,7 +33,7 @@ let stepUpload, stepNavigate, stepSelect, stepExtract;
 // ================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 OkayDocay Enhanced with GitHub Integration - Initializing...');
+    console.log('🚀 OkayDocay Enhanced with Simplified Checkboxes - Initializing...');
 
     // Initialize DOM references
     initializeDOMReferences();
@@ -57,13 +44,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize UI state
     updateStepIndicator('upload');
     setupRightClickNavigation();
-    setupFieldTypeControls();
+    setupSimplifiedFieldTypeControls();
     setupModalEventListeners();
 
     // Check GitHub configuration
     checkGitHubConfiguration();
 
-    console.log('✅ OkayDocay Enhanced with GitHub - Ready!');
+    console.log('✅ OkayDocay Enhanced with Simplified Checkboxes - Ready!');
 });
 
 function initializeDOMReferences() {
@@ -148,7 +135,7 @@ function updateGitHubUI() {
 
         if (githubCheckbox) githubCheckbox.disabled = false;
         if (githubDescription) {
-            githubDescription.textContent = 'Upload generated files directly to your GitHub repository for easy access and version control';
+            githubDescription.textContent = 'Upload configuration and scripts directly to your GitHub repository for easy access and version control';
         }
 
         if (repoDisplay) repoDisplay.textContent = `${githubRepoInfo.owner}/${githubRepoInfo.name}`;
@@ -193,255 +180,43 @@ function handleGitHubOptionChange() {
             repoInfo.style.display = 'none';
         }
     }
-
-    updateGitHubReminder();
-}
-
-function updateGitHubReminder() {
-    const githubCheckbox = document.getElementById('upload-to-github');
-    const githubReminder = document.getElementById('github-reminder');
-    const githubReminderText = document.getElementById('github-reminder-text');
-
-    if (githubCheckbox && githubReminder && githubReminderText) {
-        if (githubCheckbox.checked && githubConfigured) {
-            githubReminder.style.display = 'block';
-            githubReminderText.textContent = `Will upload to ${githubRepoInfo.owner}/${githubRepoInfo.name}`;
-        } else {
-            githubReminder.style.display = 'none';
-        }
-    }
 }
 
 // ================================
-// FIELD TYPE SETUP AND MANAGEMENT
+// SIMPLIFIED FIELD TYPE SETUP
 // ================================
 
-function setupFieldTypeControls() {
+function setupSimplifiedFieldTypeControls() {
     const fieldTypeSelect = document.getElementById('field-type');
-    const addOptionBtn = document.getElementById('add-checkbox-option-btn');
-    const finishCheckboxBtn = document.getElementById('finish-checkbox-btn');
 
     if (fieldTypeSelect) {
-        fieldTypeSelect.addEventListener('change', handleFieldTypeChange);
+        fieldTypeSelect.addEventListener('change', handleSimplifiedFieldTypeChange);
     }
 
-    if (addOptionBtn) {
-        addOptionBtn.addEventListener('click', addCheckboxOption);
-    }
-
-    if (finishCheckboxBtn) {
-        finishCheckboxBtn.addEventListener('click', finishCheckboxField);
+    // Hide checkbox options container since we're not using complex checkboxes
+    const checkboxContainer = document.getElementById('checkbox-options-container');
+    if (checkboxContainer) {
+        checkboxContainer.style.display = 'none';
     }
 }
 
-function handleFieldTypeChange() {
+function handleSimplifiedFieldTypeChange() {
     const fieldTypeSelect = document.getElementById('field-type');
     if (!fieldTypeSelect) return;
 
     const fieldType = fieldTypeSelect.value;
-    const checkboxContainer = document.getElementById('checkbox-options-container');
-    const normalControls = document.getElementById('normal-field-controls');
-
     currentFieldType = fieldType;
 
-    if (fieldType === FIELD_TYPES.CHECKBOX) {
-        if (checkboxContainer) checkboxContainer.classList.remove('hidden');
-        if (normalControls) normalControls.classList.add('hidden');
-        currentCheckboxOptions = [];
-        updateCheckboxOptionsList();
-        showStatus('Checkbox mode: Select areas for each option', 'info');
-    } else {
-        if (checkboxContainer) checkboxContainer.classList.add('hidden');
-        if (normalControls) normalControls.classList.remove('hidden');
-        currentCheckboxOptions = [];
-        isAddingCheckboxOption = false;
-    }
+    // All field types use the same simple interface now
+    const normalControls = document.getElementById('normal-field-controls');
+    if (normalControls) normalControls.classList.remove('hidden');
 
     validateField();
 }
 
-function addCheckboxOption() {
-    const optionNameInput = document.getElementById('checkbox-option-name');
-    const currentCoordsInput = document.getElementById('current-coords');
-    const targetPageSelect = document.getElementById('target-page');
-
-    if (!optionNameInput || !currentCoordsInput || !targetPageSelect) return;
-
-    const optionName = optionNameInput.value.trim();
-    const coordinates = currentCoordsInput.value;
-
-    if (!optionName) {
-        showStatus('Please enter an option name', 'error');
-        return;
-    }
-
-    if (!coordinates || !hasValidSelection) {
-        showStatus('Please select an area on the PDF for this option', 'error');
-        return;
-    }
-
-    // Check for duplicate option names
-    if (currentCheckboxOptions.find(opt => opt.name === optionName)) {
-        showStatus(`Option "${optionName}" already exists`, 'warning');
-        return;
-    }
-
-    const option = {
-        name: optionName,
-        coordinates: coordinates,
-        page: parseInt(targetPageSelect.value)
-    };
-
-    currentCheckboxOptions.push(option);
-    updateCheckboxOptionsList();
-
-    // Clear inputs for next option
-    optionNameInput.value = '';
-    currentCoordsInput.value = '';
-    clearSelectionOnly();
-
-    showStatus(`Option "${optionName}" added. Add more options or finish the checkbox field.`, 'success');
-
-    // Enable finish button
-    const finishBtn = document.getElementById('finish-checkbox-btn');
-    if (finishBtn) finishBtn.disabled = false;
-}
-
-function updateCheckboxOptionsList() {
-    const optionsList = document.getElementById('checkbox-options-list');
-    if (!optionsList) return;
-
-    if (currentCheckboxOptions.length === 0) {
-        optionsList.innerHTML = '<div style="text-align: center; opacity: 0.7; font-style: italic;">No options added yet. Select areas and add options above.</div>';
-        return;
-    }
-
-    let html = '<div style="margin-bottom: 10px;"><strong>📋 Checkbox Options:</strong></div>';
-    currentCheckboxOptions.forEach((option, index) => {
-        html += `<div class="checkbox-option-item" style="margin: 5px 0; padding: 8px; background: rgba(147, 51, 234, 0.05); border-radius: 5px; font-size: 12px; border: 1px solid rgba(147, 51, 234, 0.1);">`;
-        html += `☑️ <strong>${option.name}</strong><br>`;
-        html += `📍 Page ${option.page}: ${option.coordinates}`;
-        html += `<button onclick="removeCheckboxOption(${index})" class="remove-field-btn" style="float: right; margin-left: 5px; padding: 2px 6px; font-size: 11px;">Remove</button>`;
-        html += `<button onclick="previewCheckboxOption(${index})" class="edit-field-btn" style="float: right; margin-right: 5px; padding: 2px 6px; font-size: 11px;">Preview</button>`;
-        html += `</div>`;
-    });
-
-    optionsList.innerHTML = html;
-}
-
-function removeCheckboxOption(index) {
-    if (index >= 0 && index < currentCheckboxOptions.length) {
-        const removedOption = currentCheckboxOptions.splice(index, 1)[0];
-        updateCheckboxOptionsList();
-        showStatus(`Option "${removedOption.name}" removed`, 'info');
-
-        if (currentCheckboxOptions.length === 0) {
-            const finishBtn = document.getElementById('finish-checkbox-btn');
-            if (finishBtn) finishBtn.disabled = true;
-        }
-    }
-}
-
-function previewCheckboxOption(index) {
-    if (index >= 0 && index < currentCheckboxOptions.length) {
-        const option = currentCheckboxOptions[index];
-        const coords = option.coordinates.split(',').map(c => parseFloat(c));
-
-        if (coords.length === 4) {
-            // Navigate to option's page if different
-            if (option.page !== currentPage) {
-                currentPage = option.page;
-                loadPage(currentPage).then(() => {
-                    showFieldPreview(coords[0], coords[1], coords[2], coords[3], '#9333ea');
-                });
-            } else {
-                showFieldPreview(coords[0], coords[1], coords[2], coords[3], '#9333ea');
-            }
-            showStatus(`Previewing option "${option.name}" on page ${option.page}`, 'info');
-        }
-    }
-}
-
-function finishCheckboxField() {
-    const fieldNameInput = document.getElementById('field-name');
-    if (!fieldNameInput) return;
-
-    const fieldName = fieldNameInput.value.trim();
-
-    if (!fieldName) {
-        showStatus('Please enter a field name for the checkbox group', 'error');
-        return;
-    }
-
-    if (currentCheckboxOptions.length === 0) {
-        showStatus('Please add at least one checkbox option', 'error');
-        return;
-    }
-
-    // Create checkbox field
-    const checkboxField = {
-        name: fieldName,
-        type: FIELD_TYPES.CHECKBOX,
-        options: currentCheckboxOptions.map(opt => ({
-            name: opt.name,
-            coordinates: opt.coordinates,
-            page: opt.page
-        })),
-        created_at: new Date().toISOString()
-    };
-
-    addFieldToDefinitions(checkboxField);
-
-    // Reset checkbox mode
-    currentCheckboxOptions = [];
-    fieldNameInput.value = '';
-
-    const optionNameInput = document.getElementById('checkbox-option-name');
-    const finishBtn = document.getElementById('finish-checkbox-btn');
-
-    if (optionNameInput) optionNameInput.value = '';
-    if (finishBtn) finishBtn.disabled = true;
-
-    updateCheckboxOptionsList();
-
-    showStatus(`Checkbox field "${fieldName}" created with ${checkboxField.options.length} options`, 'success');
-}
-
 // ================================
-// SERVER-SIDE EXTRACTED DATA FUNCTIONS
+// SERVER-SIDE DATA FUNCTIONS
 // ================================
-
-async function getExtractedData() {
-    try {
-        const response = await fetch('/get_extracted_data');
-        const result = await response.json();
-        if (result.success) {
-            return result.extracted_data;
-        }
-        throw new Error(result.error || 'Failed to get extracted data');
-    } catch (error) {
-        console.error('Error getting extracted data:', error);
-        return null;
-    }
-}
-
-async function updateExtractedData(updates) {
-    try {
-        const response = await fetch('/update_extracted_data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updates)
-        });
-        const result = await response.json();
-        if (result.success) {
-            return result.extracted_data;
-        }
-        throw new Error(result.error || 'Failed to update extracted data');
-    } catch (error) {
-        console.error('Error updating extracted data:', error);
-        return null;
-    }
-}
 
 async function addFieldToServer(fieldData) {
     try {
@@ -545,12 +320,6 @@ function setupInputEvents() {
     if (fieldNameInput) {
         fieldNameInput.addEventListener('input', validateField);
     }
-
-    // Checkbox option name input
-    const optionNameInput = document.getElementById('checkbox-option-name');
-    if (optionNameInput) {
-        optionNameInput.addEventListener('input', validateField);
-    }
 }
 
 function setupButtonEvents() {
@@ -586,7 +355,7 @@ function setupSearchEvents() {
 function setupConfigMakerEvents() {
     const configButtons = [
         { id: 'target-page', handler: handlePageSelection, event: 'change' },
-        { id: 'add-field-btn', handler: addField, event: 'click' },
+        { id: 'add-field-btn', handler: addSimplifiedField, event: 'click' },
         { id: 'preview-field-btn', handler: previewField, event: 'click' },
         { id: 'clear-fields-btn', handler: clearAllFields, event: 'click' },
         { id: 'generate-config-btn', handler: generateConfig, event: 'click' }
@@ -600,10 +369,6 @@ function setupConfigMakerEvents() {
     });
 }
 
-
-// MODAL EVENT LISTENERS (GITHUB INTEGRATION)
-
-
 function setupModalEventListeners() {
     // Modal controls
     const closeModalBtn = document.getElementById('close-modal-btn');
@@ -612,24 +377,8 @@ function setupModalEventListeners() {
     const cancelBtn = document.getElementById('cancel-generation-btn');
     if (cancelBtn) cancelBtn.addEventListener('click', closeConfigGenerationModal);
 
-    const continueBtn = document.getElementById('continue-generation-btn');
-    if (continueBtn) continueBtn.addEventListener('click', continueGeneration);
-
-    const backBtn = document.getElementById('back-generation-btn');
-    if (backBtn) backBtn.addEventListener('click', backToStep1);
-
     const generateFinalBtn = document.getElementById('generate-final-btn');
     if (generateFinalBtn) generateFinalBtn.addEventListener('click', executeGeneration);
-
-    // JSON input controls
-    const loadExampleBtn = document.getElementById('load-example-data-btn');
-    if (loadExampleBtn) loadExampleBtn.addEventListener('click', loadExampleSimpleJson);
-
-    const validateBtn = document.getElementById('validate-json-btn');
-    if (validateBtn) validateBtn.addEventListener('click', validateJsonInput);
-
-    const clearBtn = document.getElementById('clear-json-btn');
-    if (clearBtn) clearBtn.addEventListener('click', clearJsonInput);
 
     // GitHub controls
     const githubCheckbox = document.getElementById('upload-to-github');
@@ -651,10 +400,6 @@ function setupModalEventListeners() {
         });
     }
 }
-
-
-// RIGHT-CLICK DRAG NAVIGATION
-
 
 function setupRightClickNavigation() {
     let isRightDragging = false;
@@ -709,9 +454,9 @@ function setupRightClickNavigation() {
     });
 }
 
-
+// ================================
 // UTILITY FUNCTIONS
-
+// ================================
 
 function showLoading(message = 'Processing...') {
     if (loadingText) loadingText.textContent = message;
@@ -883,7 +628,6 @@ async function uploadPdf(file) {
 
             // Reset field definitions for new PDF
             fieldDefinitions = [];
-            currentCheckboxOptions = [];
             updateFieldsList();
 
             // Update UI
@@ -985,9 +729,9 @@ function resetZoom() {
     loadPage(currentPage);
 }
 
-
+// ================================
 // SELECTION FUNCTIONS
-
+// ================================
 
 function startSelection(event) {
     if (!currentPdf || !pdfCanvas) return;
@@ -1093,8 +837,7 @@ function updateCoordinateFields(x1, y1, x2, y2) {
         'pdf_x2': Math.round(x2 * 10) / 10,
         'pdf_y2': Math.round(y2 * 10) / 10,
         'coord-input': `${Math.round(x1)},${Math.round(y1)},${Math.round(x2)},${Math.round(y2)}`,
-        'current-coords': `${Math.round(x1)},${Math.round(y1)},${Math.round(x2)},${Math.round(y2)}`,
-        'checkbox-coords': `${Math.round(x1)},${Math.round(y1)},${Math.round(x2)},${Math.round(y2)}`
+        'current-coords': `${Math.round(x1)},${Math.round(y1)},${Math.round(x2)},${Math.round(y2)}`
     };
 
     Object.entries(coordinateFields).forEach(([id, value]) => {
@@ -1142,7 +885,7 @@ function clearSelectionOnly() {
     clearHighlights();
     clearSelectionBox();
 
-    const fieldIds = ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2', 'coord-input', 'current-coords', 'checkbox-coords'];
+    const fieldIds = ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2', 'coord-input', 'current-coords'];
     fieldIds.forEach(id => {
         const element = document.getElementById(id);
         if (element) element.value = '';
@@ -1500,7 +1243,7 @@ async function exportResults() {
         zoom_level: currentScale,
         image_dimensions: currentImageDimensions,
         pdf_dimensions: pdfDimensions,
-        app: 'OkayDocay Enhanced'
+        app: 'OkayDocay Enhanced - Simplified Checkboxes'
     }];
 
     try {
@@ -1515,7 +1258,7 @@ async function exportResults() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `okaydocay_coordinates_${currentPdf}_export.txt`;
+            a.download = `okaydocay_simplified_coordinates_${currentPdf}_export.txt`;
             a.click();
             window.URL.revokeObjectURL(url);
             showStatus('Export completed successfully', 'success');
@@ -1528,7 +1271,7 @@ async function exportResults() {
 }
 
 // ================================
-// CONFIG MAKER FUNCTIONS
+// SIMPLIFIED CONFIG MAKER FUNCTIONS
 // ================================
 
 function populatePageDropdown() {
@@ -1563,18 +1306,14 @@ function handlePageSelection() {
 function validateField() {
     const fieldNameInput = document.getElementById('field-name');
     const targetPageSelect = document.getElementById('target-page');
-    const fieldTypeSelect = document.getElementById('field-type');
     const validation = document.getElementById('field-validation');
     const addBtn = document.getElementById('add-field-btn');
     const previewBtn = document.getElementById('preview-field-btn');
-    const addOptionBtn = document.getElementById('add-checkbox-option-btn');
-    const previewCheckboxBtn = document.getElementById('preview-checkbox-btn');
 
-    if (!fieldNameInput || !targetPageSelect || !fieldTypeSelect) return;
+    if (!fieldNameInput || !targetPageSelect) return;
 
     const fieldName = fieldNameInput.value.trim();
     const targetPage = targetPageSelect.value;
-    const fieldType = fieldTypeSelect.value;
 
     let isValid = false;
 
@@ -1588,9 +1327,6 @@ function validateField() {
             validation.textContent = 'Please select a target page';
             validation.classList.remove('hidden');
         }
-    } else if (fieldType === FIELD_TYPES.CHECKBOX) {
-        if (validation) validation.classList.add('hidden');
-        isValid = true;
     } else {
         const currentCoordsInput = document.getElementById('current-coords');
         const currentCoords = currentCoordsInput ? currentCoordsInput.value : '';
@@ -1606,23 +1342,8 @@ function validateField() {
     }
 
     // Update button states
-    if (fieldType === FIELD_TYPES.CHECKBOX) {
-        if (addBtn) addBtn.disabled = true;
-        if (previewBtn) previewBtn.disabled = !hasValidSelection;
-        if (addOptionBtn) {
-            const optionNameInput = document.getElementById('checkbox-option-name');
-            const optionName = optionNameInput ? optionNameInput.value.trim() : '';
-            addOptionBtn.disabled = !hasValidSelection || !optionName;
-        }
-        if (previewCheckboxBtn) {
-            previewCheckboxBtn.disabled = !hasValidSelection;
-        }
-    } else {
-        if (addBtn) addBtn.disabled = !isValid;
-        if (previewBtn) previewBtn.disabled = !isValid;
-        if (addOptionBtn) addOptionBtn.disabled = true;
-        if (previewCheckboxBtn) previewCheckboxBtn.disabled = true;
-    }
+    if (addBtn) addBtn.disabled = !isValid;
+    if (previewBtn) previewBtn.disabled = !isValid;
 }
 
 function previewField() {
@@ -1669,24 +1390,20 @@ function showFieldPreview(x1, y1, x2, y2, color = '#10b981') {
     extractTextFromSelection(x1, y1, x2, y2);
 }
 
-function addField() {
-    const fieldTypeSelect = document.getElementById('field-type');
-    if (!fieldTypeSelect) return;
+// ================================
+// SIMPLIFIED FIELD ADDITION
+// ================================
 
-    const fieldType = fieldTypeSelect.value;
-
-    if (fieldType === FIELD_TYPES.CHECKBOX) {
-        showStatus('For checkbox fields, use "Add Option" to add individual options, then "Finish Checkbox Field"', 'info');
-        return;
-    }
-
+function addSimplifiedField() {
     const fieldNameInput = document.getElementById('field-name');
+    const fieldTypeSelect = document.getElementById('field-type');
     const targetPageSelect = document.getElementById('target-page');
     const currentCoordsInput = document.getElementById('current-coords');
 
-    if (!fieldNameInput || !targetPageSelect || !currentCoordsInput) return;
+    if (!fieldNameInput || !fieldTypeSelect || !targetPageSelect || !currentCoordsInput) return;
 
     const fieldName = fieldNameInput.value.trim();
+    const fieldType = fieldTypeSelect.value;
     const targetPage = parseInt(targetPageSelect.value);
     const coordinates = currentCoordsInput.value;
 
@@ -1701,6 +1418,7 @@ function addField() {
         return;
     }
 
+    // Create simplified field object - same structure for all field types
     const field = {
         name: fieldName,
         type: fieldType,
@@ -1715,14 +1433,14 @@ function addField() {
 function addFieldToDefinitions(field) {
     fieldDefinitions.push(field);
     updateFieldsList();
+    updateFieldsReference();
 
     // Add field to server-side extracted data
     addFieldToServer({
         field_name: field.name,
         field_type: field.type,
         coordinates: field.coordinates || '',
-        page_num: field.page,
-        options: field.options || []
+        page_num: field.page
     });
 
     // Clear inputs but preserve page state
@@ -1736,9 +1454,7 @@ function addFieldToDefinitions(field) {
     enableExtractionControls(false);
     clearSelectionOnly();
 
-    const fieldTypeText = field.type === FIELD_TYPES.CHECKBOX ?
-        `checkbox with ${field.options.length} options` : field.type;
-    showStatus(`${fieldTypeText} field "${field.name}" added successfully`, 'success');
+    showStatus(`${field.type} field "${field.name}" added successfully`, 'success');
 
     const clearFieldsBtn = document.getElementById('clear-fields-btn');
     const generateConfigBtn = document.getElementById('generate-config-btn');
@@ -1758,15 +1474,10 @@ function updateFieldsList() {
 
     const fieldsByPage = {};
     fieldDefinitions.forEach(field => {
-        const pages = field.type === FIELD_TYPES.CHECKBOX ?
-            [...new Set(field.options.map(opt => opt.page))] : [field.page];
-
-        pages.forEach(page => {
-            if (!fieldsByPage[page]) {
-                fieldsByPage[page] = [];
-            }
-            fieldsByPage[page].push(field);
-        });
+        if (!fieldsByPage[field.page]) {
+            fieldsByPage[field.page] = [];
+        }
+        fieldsByPage[field.page].push(field);
     });
 
     let html = '';
@@ -1776,17 +1487,9 @@ function updateFieldsList() {
 
         fields.forEach((field) => {
             const typeIcon = getFieldTypeIcon(field.type);
-            html += `<div class="fields-list-item" style="margin: 5px 0; padding: 12px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius); font-size: 0.875rem; transition: var(--transition-slow); position: relative; overflow: hidden;">`;
+            html += `<div class="fields-list-item ${field.type}" style="margin: 5px 0; padding: 12px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius); font-size: 0.875rem; transition: var(--transition-slow); position: relative; overflow: hidden;">`;
             html += `${typeIcon} <strong>${field.name}</strong> (${field.type})<br>`;
-
-            if (field.type === FIELD_TYPES.CHECKBOX) {
-                html += `📋 ${field.options.length} options:<br>`;
-                field.options.forEach(option => {
-                    html += `&nbsp;&nbsp;☑️ ${option.name} (Page ${option.page})<br>`;
-                });
-            } else {
-                html += `📍 Coordinates: ${field.coordinates}`;
-            }
+            html += `📍 Coordinates: ${field.coordinates}`;
 
             html += `<button onclick="editField('${field.name}')" class="edit-field-btn" style="float: right; margin-left: 5px; padding: 4px 8px; font-size: 11px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Edit</button>`;
             html += `<button onclick="removeField('${field.name}')" class="remove-field-btn" style="float: right; padding: 4px 8px; font-size: 11px; background: var(--danger); color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>`;
@@ -1812,106 +1515,212 @@ function getFieldTypeIcon(type) {
     }
 }
 
-function editField(fieldName) {
-    const field = fieldDefinitions.find(f => f.name === fieldName);
-    if (!field) return;
+// ================================
+// SIMPLIFIED FIELD REFERENCE PANEL
+// ================================
 
-    const fieldNameInput = document.getElementById('field-name');
-    const fieldTypeSelect = document.getElementById('field-type');
-    const targetPageSelect = document.getElementById('target-page');
-    const currentCoordsInput = document.getElementById('current-coords');
+function updateFieldsReference() {
+    const referenceList = document.getElementById('fields-reference-list');
+    if (!referenceList) return;
 
-    if (fieldNameInput) fieldNameInput.value = field.name;
-    if (fieldTypeSelect) fieldTypeSelect.value = field.type;
-
-    if (field.type === FIELD_TYPES.CHECKBOX) {
-        currentCheckboxOptions = [...field.options];
-        handleFieldTypeChange();
-        updateCheckboxOptionsList();
-    } else {
-        if (targetPageSelect) targetPageSelect.value = field.page;
-        if (currentCoordsInput) currentCoordsInput.value = field.coordinates;
-
-        if (field.page !== currentPage) {
-            currentPage = field.page;
-            loadPage(currentPage);
-        }
+    if (fieldDefinitions.length === 0) {
+        referenceList.innerHTML = `
+            <div style="text-align: center; color: var(--gray-500); font-style: italic; padding: 20px;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">📋</div>
+                <div>No fields configured yet.</div>
+                <div style="font-size: 0.8rem; margin-top: 5px;">Add fields first to see the reference.</div>
+            </div>
+        `;
+        return;
     }
 
-    removeField(fieldName);
-    showStatus(`Field "${fieldName}" loaded for editing`, 'info');
+    // Group fields by page
+    const fieldsByPage = {};
+    fieldDefinitions.forEach(field => {
+        if (!fieldsByPage[field.page]) fieldsByPage[field.page] = [];
+        fieldsByPage[field.page].push(field);
+    });
+
+    // Generate simplified reference HTML
+    let html = `<div class="field-reference-container">`;
+
+    const sortedPages = Object.keys(fieldsByPage).sort((a, b) => parseInt(a) - parseInt(b));
+
+    sortedPages.forEach((page, pageIndex) => {
+        html += `
+            <div class="page-section">
+                <div class="page-header">
+                    <span>📄</span>
+                    <span>Page ${page}</span>
+                    <span style="opacity: 0.8; font-weight: normal; font-size: 0.75rem;">(${fieldsByPage[page].length} fields)</span>
+                </div>
+                <div class="fields-grid">
+        `;
+
+        fieldsByPage[page].forEach((field, fieldIndex) => {
+            const fieldClass = `${field.type}-field`;
+            const typeEmoji = getFieldTypeEmoji(field.type);
+            const copyId = `copy-${page}-${fieldIndex}`;
+
+            html += `
+                <div class="field-block ${fieldClass}" onclick="copyFieldName('${field.name}', '${copyId}')">
+                    <button class="copy-button" id="${copyId}" onclick="event.stopPropagation(); copyFieldName('${field.name}', '${copyId}')">
+                        📋 Copy
+                    </button>
+
+                    <div class="field-header">
+                        <div class="field-name">${field.name}</div>
+                    </div>
+
+                    <div class="field-type ${field.type}">
+                        ${typeEmoji} ${field.type}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    // Add usage examples with actual field names
+    html += `
+        <div class="usage-examples">
+            <div class="usage-title">
+                💡 Usage Examples
+            </div>
+            <div class="usage-code">
+                # Access field by name<br>
+                field = get_field_by_name(config, '${fieldDefinitions[0]?.name || 'field_name'}')
+            </div>
+            <div class="usage-code">
+                # Loop through page fields<br>
+                for field in config['pages']['${sortedPages[0] || '1'}']['fields']:
+            </div>
+            <div class="usage-code">
+                # Access first field directly<br>
+                first_field = config['pages']['${sortedPages[0] || '1'}']['fields'][0]['name']
+            </div>
+        </div>
+    `;
+
+    html += `</div>`;
+
+    referenceList.innerHTML = html;
 }
 
-async function removeField(fieldName) {
+// Function to copy field name to clipboard
+function copyFieldName(fieldName, buttonId) {
+    // Create a temporary textarea to copy the text
+    const tempTextarea = document.createElement('textarea');
+    tempTextarea.value = fieldName;
+    document.body.appendChild(tempTextarea);
+    tempTextarea.select();
+
     try {
-        fieldDefinitions = fieldDefinitions.filter(f => f.name !== fieldName);
-        updateFieldsList();
-        showStatus(`Field "${fieldName}" removed`, 'info');
+        document.execCommand('copy');
 
-        if (fieldDefinitions.length === 0) {
-            const clearFieldsBtn = document.getElementById('clear-fields-btn');
-            const generateConfigBtn = document.getElementById('generate-config-btn');
+        // Update button to show success
+        const button = document.getElementById(buttonId);
+        if (button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '✅ Copied';
+            button.classList.add('copied');
 
-            if (clearFieldsBtn) clearFieldsBtn.disabled = true;
-            if (generateConfigBtn) generateConfigBtn.disabled = true;
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('copied');
+            }, 2000);
         }
-    } catch (error) {
-        showStatus(`Error removing field: ${error.message}`, 'error');
+
+        // Show status message
+        showStatus(`Field name "${fieldName}" copied to clipboard!`, 'success');
+
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+        showStatus('Failed to copy field name', 'error');
+    } finally {
+        document.body.removeChild(tempTextarea);
     }
 }
 
-async function clearAllFields() {
-    if (fieldDefinitions.length === 0) return;
+// Enhanced setup function for reference panel
+function setupReferencePanel() {
+    const toggleBtn = document.getElementById('toggle-reference-btn');
+    const referenceContent = document.getElementById('fields-reference-content');
 
-    if (confirm('Are you sure you want to clear all field definitions?')) {
-        try {
-            fieldDefinitions = [];
-            currentCheckboxOptions = [];
-            updateFieldsList();
-            updateCheckboxOptionsList();
+    if (toggleBtn && referenceContent) {
+        // Set initial state to expanded
+        let isExpanded = true;
 
-            const clearFieldsBtn = document.getElementById('clear-fields-btn');
-            const generateConfigBtn = document.getElementById('generate-config-btn');
+        toggleBtn.addEventListener('click', function() {
+            isExpanded = !isExpanded;
 
-            if (clearFieldsBtn) clearFieldsBtn.disabled = true;
-            if (generateConfigBtn) generateConfigBtn.disabled = true;
+            if (isExpanded) {
+                referenceContent.style.display = 'block';
+                toggleBtn.textContent = 'Hide ↑';
+                toggleBtn.style.background = 'var(--primary-100)';
+                toggleBtn.style.color = 'var(--primary-700)';
+            } else {
+                referenceContent.style.display = 'none';
+                toggleBtn.textContent = 'Show ↓';
+                toggleBtn.style.background = 'var(--gray-100)';
+                toggleBtn.style.color = 'var(--gray-600)';
+            }
+        });
 
-            showStatus('All fields cleared', 'info');
-        } catch (error) {
-            showStatus(`Error clearing fields: ${error.message}`, 'error');
-        }
+        // Set initial button style
+        toggleBtn.style.background = 'var(--primary-100)';
+        toggleBtn.style.color = 'var(--primary-700)';
+        toggleBtn.style.borderRadius = '4px';
+        toggleBtn.style.padding = '4px 8px';
+        toggleBtn.style.fontSize = '0.75rem';
+        toggleBtn.style.fontWeight = '500';
+        toggleBtn.style.transition = 'all 0.2s ease';
+    }
+}
+
+// Helper function to get field type emoji
+function getFieldTypeEmoji(type) {
+    switch(type) {
+        case FIELD_TYPES.TEXT: return '📝';
+        case FIELD_TYPES.SIGNATURE: return '✍️';
+        case FIELD_TYPES.CHECKBOX: return '☑️';
+        default: return '🎯';
     }
 }
 
 // ================================
-// ENHANCED CONFIG GENERATION WITH GITHUB INTEGRATION
+// CONFIG GENERATION WITH SIMPLIFIED STRUCTURE
 // ================================
 
 function showConfigGenerationModal() {
     const modal = document.getElementById('config-generation-modal');
-    const step1 = document.getElementById('generation-step-1');
-    const step2 = document.getElementById('generation-step-2');
+    const scriptsSection = document.getElementById('scripts-input-section');
     const processing = document.getElementById('generation-processing');
     const success = document.getElementById('generation-success');
 
     if (modal) modal.classList.remove('hidden');
-    if (step1) step1.classList.remove('hidden');
-    if (step2) step2.classList.add('hidden');
+    if (scriptsSection) scriptsSection.classList.remove('hidden');
     if (processing) processing.classList.add('hidden');
     if (success) success.classList.add('hidden');
 
     // Reset form
-    const configOnlyRadio = document.querySelector('input[name="generation_type"][value="config_only"]');
-    if (configOnlyRadio) configOnlyRadio.checked = true;
-
     const githubCheckbox = document.getElementById('upload-to-github');
     if (githubCheckbox) githubCheckbox.checked = false;
 
-    const jsonInput = document.getElementById('simple-json-input');
-    if (jsonInput) jsonInput.value = '';
+    const scriptInputs = ['script1', 'script2', 'script3'];
+    scriptInputs.forEach(id => {
+        const textarea = document.getElementById(id);
+        if (textarea) textarea.value = '';
+    });
 
-    const validationResult = document.getElementById('json-validation-result');
-    if (validationResult) validationResult.classList.add('hidden');
+    // Update simplified fields reference
+    updateFieldsReference();
+    setupReferencePanel();
 
     handleGitHubOptionChange();
 }
@@ -1922,167 +1731,36 @@ function closeConfigGenerationModal() {
     pendingDownloadData = null;
 }
 
-function continueGeneration() {
-    const selectedType = document.querySelector('input[name="generation_type"]:checked');
-    if (!selectedType) return;
-
-    if (selectedType.value === 'populated_config') {
-        // Show step 2 for JSON input
-        const step1 = document.getElementById('generation-step-1');
-        const step2 = document.getElementById('generation-step-2');
-
-        if (step1) step1.classList.add('hidden');
-        if (step2) step2.classList.remove('hidden');
-
-        loadFormatExample();
-        loadExampleSimpleJson();
-        updateGitHubReminder();
-    } else {
-        // Directly generate for other types
-        executeGeneration();
-    }
-}
-
-function backToStep1() {
-    const step1 = document.getElementById('generation-step-1');
-    const step2 = document.getElementById('generation-step-2');
-
-    if (step2) step2.classList.add('hidden');
-    if (step1) step1.classList.remove('hidden');
-}
-
-function loadFormatExample() {
-    const example = generateSimpleJsonExample();
-    const formatDiv = document.getElementById('format-example');
-
-    if (!formatDiv) return;
-
-    let exampleText = '{\n';
-    Object.keys(example).forEach((key, index, array) => {
-        const value = typeof example[key] === 'string' ? `"${example[key]}"` : example[key];
-        exampleText += `  "${key}": ${value}`;
-        if (index < array.length - 1) exampleText += ',';
-        exampleText += '\n';
-    });
-    exampleText += '}';
-
-    formatDiv.textContent = exampleText;
-}
-
-function generateSimpleJsonExample() {
-    const example = {};
-
-    fieldDefinitions.forEach(field => {
-        if (field.type === FIELD_TYPES.CHECKBOX) {
-            // Add checkbox options
-            field.options.forEach((option, index) => {
-                example[`${field.name}/${option.name}`] = index === 0; // First option true
-            });
-        } else if (field.type === FIELD_TYPES.SIGNATURE) {
-            example[field.name] = "base64_signature_data_here";
-        } else {
-            // Text field
-            example[field.name] = `Sample ${field.name.replace(/_/g, ' ')}`;
-        }
-    });
-
-    return example;
-}
-
-function loadExampleSimpleJson() {
-    const example = generateSimpleJsonExample();
-    const jsonInput = document.getElementById('simple-json-input');
-    if (jsonInput) {
-        jsonInput.value = JSON.stringify(example, null, 2);
-    }
-}
-
-function validateJsonInput() {
-    const jsonInput = document.getElementById('simple-json-input');
-    const resultDiv = document.getElementById('json-validation-result');
-
-    if (!jsonInput || !resultDiv) return false;
-
-    const jsonText = jsonInput.value.trim();
-
-    if (!jsonText) {
-        resultDiv.innerHTML = '<div class="status warning">No JSON data entered</div>';
-        resultDiv.classList.remove('hidden');
-        return false;
-    }
-
-    try {
-        const parsed = JSON.parse(jsonText);
-        resultDiv.innerHTML = '<div class="status success">✅ Valid JSON format</div>';
-        resultDiv.classList.remove('hidden');
-        return true;
-    } catch (error) {
-        resultDiv.innerHTML = `<div class="status error">❌ Invalid JSON: ${error.message}</div>`;
-        resultDiv.classList.remove('hidden');
-        return false;
-    }
-}
-
-function clearJsonInput() {
-    const jsonInput = document.getElementById('simple-json-input');
-    const validationResult = document.getElementById('json-validation-result');
-
-    if (jsonInput) jsonInput.value = '';
-    if (validationResult) validationResult.classList.add('hidden');
-}
-
 async function executeGeneration() {
-    const selectedTypeRadio = document.querySelector('input[name="generation_type"]:checked');
     const githubCheckbox = document.getElementById('upload-to-github');
-
-    if (!selectedTypeRadio) return;
-
-    const selectedType = selectedTypeRadio.value;
     const uploadToGithub = githubCheckbox && githubCheckbox.checked && githubConfigured;
-    let simpleJsonData = {};
+
+    // Get manual scripts
+    const script1 = document.getElementById('script1')?.value || '';
+    const script2 = document.getElementById('script2')?.value || '';
+    const script3 = document.getElementById('script3')?.value || '';
 
     // Show processing state
-    const step1 = document.getElementById('generation-step-1');
-    const step2 = document.getElementById('generation-step-2');
+    const scriptsSection = document.getElementById('scripts-input-section');
     const processing = document.getElementById('generation-processing');
 
-    if (step1) step1.classList.add('hidden');
-    if (step2) step2.classList.add('hidden');
+    if (scriptsSection) scriptsSection.classList.add('hidden');
     if (processing) processing.classList.remove('hidden');
-
-    // Get simple JSON data if needed
-    if (selectedType === 'populated_config') {
-        const jsonInput = document.getElementById('simple-json-input');
-        const jsonText = jsonInput ? jsonInput.value.trim() : '';
-
-        if (!jsonText) {
-            showStatus('Please enter simple JSON data', 'error');
-            backToStep1();
-            return;
-        }
-
-        try {
-            simpleJsonData = JSON.parse(jsonText);
-        } catch (error) {
-            showStatus(`Invalid JSON format: ${error.message}`, 'error');
-            backToStep1();
-            return;
-        }
-    }
 
     // Update processing status
     const processingStatus = document.getElementById('processing-status');
     if (processingStatus) {
         processingStatus.textContent = uploadToGithub ?
-            'Generating and uploading to GitHub...' :
-            'Generating configuration...';
+            'Generating simplified config and uploading to GitHub...' :
+            'Generating simplified configuration package...';
     }
 
     try {
         // Prepare request data
         const requestData = {
-            simple_json: selectedType === 'populated_config' ? simpleJsonData : {},
-            generate_script: selectedType === 'config_with_script' || selectedType === 'populated_config',
+            script1: script1,
+            script2: script2,
+            script3: script3,
             upload_to_github: uploadToGithub
         };
 
@@ -2116,7 +1794,7 @@ async function executeGeneration() {
                 const disposition = response.headers.get('Content-Disposition');
                 const filename = disposition ?
                     disposition.split('filename=')[1]?.replace(/"/g, '') :
-                    `config_${Date.now()}.json`;
+                    `simplified_config_package_${Date.now()}.zip`;
 
                 a.download = filename;
                 a.click();
@@ -2126,11 +1804,12 @@ async function executeGeneration() {
                 pendingDownloadData = {
                     blob: blob,
                     filename: filename,
-                    selectedType: selectedType,
-                    simpleJsonData: simpleJsonData
+                    script1: script1,
+                    script2: script2,
+                    script3: script3
                 };
 
-                showDownloadSuccess(selectedType);
+                showDownloadSuccess();
             }
 
         } else {
@@ -2141,7 +1820,7 @@ async function executeGeneration() {
     } catch (error) {
         if (processing) processing.classList.add('hidden');
         showStatus(`Generation failed: ${error.message}`, 'error');
-        backToStep1();
+        if (scriptsSection) scriptsSection.classList.remove('hidden');
     }
 }
 
@@ -2158,7 +1837,7 @@ function showGitHubUploadSuccess(result) {
     if (success) success.classList.remove('hidden');
 
     if (successDetails) {
-        successDetails.textContent = 'Your configuration has been uploaded to GitHub!';
+        successDetails.textContent = 'Your simplified configuration and scripts have been uploaded to GitHub!';
     }
 
     if (githubSuccessInfo) {
@@ -2166,7 +1845,7 @@ function showGitHubUploadSuccess(result) {
     }
 
     if (githubUploadDetails) {
-        githubUploadDetails.textContent = `Files uploaded to ${githubRepoInfo.owner}/${githubRepoInfo.name}`;
+        githubUploadDetails.textContent = `Simplified configuration and scripts uploaded to ${githubRepoInfo.owner}/${githubRepoInfo.name}`;
     }
 
     if (githubViewLink && result.github_url) {
@@ -2180,11 +1859,11 @@ function showGitHubUploadSuccess(result) {
     // Auto close modal after 5 seconds
     setTimeout(() => {
         closeConfigGenerationModal();
-        showStatus('Configuration uploaded to GitHub successfully!', 'success');
+        showStatus('Simplified configuration package uploaded to GitHub successfully!', 'success');
     }, 5000);
 }
 
-function showDownloadSuccess(selectedType) {
+function showDownloadSuccess() {
     const processing = document.getElementById('generation-processing');
     const success = document.getElementById('generation-success');
     const successDetails = document.getElementById('success-details');
@@ -2194,24 +1873,14 @@ function showDownloadSuccess(selectedType) {
     if (processing) processing.classList.add('hidden');
     if (success) success.classList.remove('hidden');
 
-    let successMessage = '';
-    if (selectedType === 'config_only') {
-        successMessage = 'Configuration JSON has been downloaded.';
-    } else if (selectedType === 'config_with_script') {
-        successMessage = 'ZIP package with configuration JSON and transformer script has been downloaded.';
-    } else {
-        successMessage = 'ZIP package with populated configuration and transformer script has been downloaded.';
-    }
-
     if (successDetails) {
-        successDetails.textContent = successMessage;
+        successDetails.textContent = 'Simplified configuration package with your custom scripts has been downloaded.';
     }
 
     // Show download actions if GitHub is configured
     if (githubConfigured && downloadActions) {
         downloadActions.classList.remove('hidden');
 
-        // Hide GitHub upload button if not configured
         if (uploadToGithubLaterBtn) {
             uploadToGithubLaterBtn.style.display = githubConfigured ? 'inline-flex' : 'none';
         }
@@ -2221,7 +1890,7 @@ function showDownloadSuccess(selectedType) {
     if (!githubConfigured) {
         setTimeout(() => {
             closeConfigGenerationModal();
-            showStatus('Configuration generated successfully!', 'success');
+            showStatus('Simplified configuration package generated successfully!', 'success');
         }, 3000);
     }
 }
@@ -2233,7 +1902,6 @@ async function uploadToGithubLater() {
     }
 
     try {
-        // Show loading
         const uploadBtn = document.getElementById('upload-to-github-later-btn');
         if (uploadBtn) {
             uploadBtn.disabled = true;
@@ -2242,8 +1910,9 @@ async function uploadToGithubLater() {
 
         // Re-send the generation request with GitHub upload enabled
         const requestData = {
-            simple_json: pendingDownloadData.simpleJsonData || {},
-            generate_script: pendingDownloadData.selectedType === 'config_with_script' || pendingDownloadData.selectedType === 'populated_config',
+            script1: pendingDownloadData.script1 || '',
+            script2: pendingDownloadData.script2 || '',
+            script3: pendingDownloadData.script3 || '',
             upload_to_github: true
         };
 
@@ -2269,7 +1938,6 @@ async function uploadToGithubLater() {
     } catch (error) {
         showStatus(`GitHub upload failed: ${error.message}`, 'error');
 
-        // Reset button
         const uploadBtn = document.getElementById('upload-to-github-later-btn');
         if (uploadBtn) {
             uploadBtn.disabled = false;
@@ -2287,7 +1955,7 @@ function downloadPendingFiles() {
         a.click();
         window.URL.revokeObjectURL(url);
 
-        showStatus('Files downloaded successfully!', 'success');
+        showStatus('Package downloaded successfully!', 'success');
     }
 }
 
@@ -2300,42 +1968,85 @@ async function generateConfig() {
     showConfigGenerationModal();
 }
 
+function clearAllFields() {
+    if (fieldDefinitions.length === 0) return;
 
+    if (confirm('Are you sure you want to clear all field definitions?')) {
+        try {
+            fieldDefinitions = [];
+            updateFieldsList();
+            updateFieldsReference();
+
+            const clearFieldsBtn = document.getElementById('clear-fields-btn');
+            const generateConfigBtn = document.getElementById('generate-config-btn');
+
+            if (clearFieldsBtn) clearFieldsBtn.disabled = true;
+            if (generateConfigBtn) generateConfigBtn.disabled = true;
+
+            showStatus('All fields cleared', 'info');
+        } catch (error) {
+            showStatus(`Error clearing fields: ${error.message}`, 'error');
+        }
+    }
+}
+
+// ================================
 // GLOBAL FUNCTION EXPORTS
+// ================================
 
+// Make copyFieldName globally accessible
+window.copyFieldName = copyFieldName;
+
+window.removeField = function(fieldName) {
+    fieldDefinitions = fieldDefinitions.filter(f => f.name !== fieldName);
+    updateFieldsList();
+    updateFieldsReference();
+    showStatus(`Field "${fieldName}" removed`, 'info');
+
+    if (fieldDefinitions.length === 0) {
+        const clearFieldsBtn = document.getElementById('clear-fields-btn');
+        const generateConfigBtn = document.getElementById('generate-config-btn');
+
+        if (clearFieldsBtn) clearFieldsBtn.disabled = true;
+        if (generateConfigBtn) generateConfigBtn.disabled = true;
+    }
+};
+
+window.editField = function(fieldName) {
+    const field = fieldDefinitions.find(f => f.name === fieldName);
+    if (!field) return;
+
+    const fieldNameInput = document.getElementById('field-name');
+    const fieldTypeSelect = document.getElementById('field-type');
+    const targetPageSelect = document.getElementById('target-page');
+    const currentCoordsInput = document.getElementById('current-coords');
+
+    if (fieldNameInput) fieldNameInput.value = field.name;
+    if (fieldTypeSelect) fieldTypeSelect.value = field.type;
+    if (targetPageSelect) targetPageSelect.value = field.page;
+    if (currentCoordsInput) currentCoordsInput.value = field.coordinates;
+
+    if (field.page !== currentPage) {
+        currentPage = field.page;
+        loadPage(currentPage);
+    }
+
+    window.removeField(fieldName);
+    showStatus(`Field "${fieldName}" loaded for editing`, 'info');
+};
 
 // Make functions globally accessible for HTML onclick handlers
-window.removeField = removeField;
-window.editField = editField;
-window.removeCheckboxOption = removeCheckboxOption;
-window.previewCheckboxOption = previewCheckboxOption;
 window.generateConfig = generateConfig;
 window.showConfigGenerationModal = showConfigGenerationModal;
 window.closeConfigGenerationModal = closeConfigGenerationModal;
-window.continueGeneration = continueGeneration;
-window.backToStep1 = backToStep1;
 window.executeGeneration = executeGeneration;
-window.loadExampleSimpleJson = loadExampleSimpleJson;
-window.validateJsonInput = validateJsonInput;
-window.clearJsonInput = clearJsonInput;
 window.handleGitHubOptionChange = handleGitHubOptionChange;
 window.uploadToGithubLater = uploadToGithubLater;
 window.downloadPendingFiles = downloadPendingFiles;
 
-
-// CONSOLE LOGGING AND DEBUG
-
-
-console.log('📄 OkayDocay Enhanced - JavaScript Loaded');
-console.log('🎯 Features: PDF Upload, Field Configuration, Script Generation');
-console.log('⚡ Field Types: Text, Signature, Checkbox');
-console.log('🔧 Script Maker: Integrated transformation script generation');
-console.log('🐙 GitHub Integration: Direct repository uploads');
-console.log('🚀 Ready for PDF processing!');
-
-
+// ================================
 // ERROR HANDLING AND RECOVERY
-
+// ================================
 
 window.addEventListener('error', function(event) {
     console.error('Global JavaScript Error:', event.error);
@@ -2347,24 +2058,9 @@ window.addEventListener('unhandledrejection', function(event) {
     showStatus(`Network error: ${event.reason?.message || 'Request failed'}`, 'error');
 });
 
-
-// PERFORMANCE MONITORING
-
-
-if (window.performance && window.performance.mark) {
-    window.performance.mark('okaydocay-script-loaded');
-
-    window.addEventListener('load', function() {
-        window.performance.mark('okaydocay-app-ready');
-
-        const loadTime = window.performance.now();
-        console.log(`🚀 OkayDocay Enhanced loaded in ${loadTime.toFixed(2)}ms`);
-    });
-}
-
-
+// ================================
 // KEYBOARD SHORTCUTS
-
+// ================================
 
 document.addEventListener('keydown', function(event) {
     // Escape key to close modal
@@ -2395,9 +2091,9 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-
+// ================================
 // FINAL INITIALIZATION CHECK
-
+// ================================
 
 document.addEventListener('DOMContentLoaded', function() {
     // Verify all critical elements are present
@@ -2412,7 +2108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (missingElements.length > 0) {
         console.warn('⚠️ Missing critical elements:', missingElements);
     } else {
-        console.log('✅ All critical elements found - OkayDocay Enhanced ready!');
+        console.log('✅ All critical elements found - OkayDocay Enhanced with Simplified Checkboxes ready!');
     }
 
     // Initialize UI state
@@ -2422,6 +2118,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (generateConfigBtn) generateConfigBtn.disabled = true;
     if (clearFieldsBtn) clearFieldsBtn.disabled = true;
 
-    showStatus('Ready! Upload a PDF to begin field configuration.', 'info');
+    showStatus('Ready! Upload a PDF to begin simplified field configuration.', 'info');
 });
 
+// ================================
+// PERFORMANCE MONITORING
+// ================================
+
+if (window.performance && window.performance.mark) {
+    window.performance.mark('okaydocay-simplified-script-loaded');
+
+    window.addEventListener('load', function() {
+        window.performance.mark('okaydocay-simplified-app-ready');
+
+        const loadTime = window.performance.now();
+        console.log(`🚀 OkayDocay Enhanced with Simplified Checkboxes loaded in ${loadTime.toFixed(2)}ms`);
+    });
+}
+
+// ================================
+// CONSOLE LOGGING AND DEBUG
+// ================================
+
+console.log('📄 OkayDocay Enhanced with Simplified Checkboxes - JavaScript Loaded');
+console.log('🎯 Features: PDF Upload, Simplified Field Configuration, Manual Script Upload');
+console.log('⚡ Field Types: Text, Signature, Simple Checkbox (Tick Box)');
+console.log('☑️ Checkbox Implementation: Simple tick boxes with coordinates only');
+console.log('🔧 Manual Scripts: Upload 3 custom Python scripts');
+console.log('🐙 GitHub Integration: Direct repository uploads');
+console.log('🚀 Ready for simplified PDF processing!');
+
+let currentPdf = null;

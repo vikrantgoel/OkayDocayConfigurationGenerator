@@ -18,10 +18,9 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 
 # GitHub Configuration
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')  # Set this in your environment
-GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', 'your-username')  # Your GitHub username
-GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'pdf-configs')  # Your repository name
-
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
+GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', 'your-username')
+GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'pdf-configs')
 
 user_sessions = {}
 sessions_lock = threading.Lock()
@@ -32,19 +31,19 @@ CLEANUP_INTERVAL = 3600
 
 
 class UserSession:
-    """Isolated storage for each user session with field management"""
+    """Isolated storage for each user session with simplified field management"""
 
     def __init__(self, session_id):
         self.session_id = session_id
         self.created_at = datetime.now()
         self.last_accessed = datetime.now()
-        self.pdfs = {}  # {filename: pdf_data}
-        self.image_cache = {}  # {cache_key: image_data}
-        self.text_cache = {}  # {cache_key: text_data}
-        self.temp_files = []  # Track temp files for cleanup
+        self.pdfs = {}
+        self.image_cache = {}
+        self.text_cache = {}
+        self.temp_files = []
 
-        # Field management storage
-        self.page_fields = {}  # {page_num: [{name, coordinates, text, page}, ...]}
+        # Simplified field management storage
+        self.page_fields = {}
 
         # Initialize server-side extracted data
         self.extracted_data = {}
@@ -57,12 +56,10 @@ class UserSession:
 
     def cleanup(self):
         """Clean up resources when session expires"""
-        # Close PDF objects
         for pdf_data in self.pdfs.values():
             if 'pdf' in pdf_data:
                 pdf_data['pdf'].close()
 
-        # Remove temp files
         for temp_file in self.temp_files:
             try:
                 if os.path.exists(temp_file):
@@ -70,7 +67,6 @@ class UserSession:
             except:
                 pass
 
-        # Clear all data
         self.pdfs.clear()
         self.image_cache.clear()
         self.text_cache.clear()
@@ -131,12 +127,10 @@ def background_cleanup():
             print(f"Background cleanup error: {e}")
 
 
-# Start background cleanup thread
 cleanup_thread = threading.Thread(target=background_cleanup, daemon=True)
 cleanup_thread.start()
 
 
-# Cleanup on app shutdown
 @atexit.register
 def cleanup_on_exit():
     with sessions_lock:
@@ -145,7 +139,6 @@ def cleanup_on_exit():
     print("Cleaned up all sessions on exit")
 
 
-# Create templates directory if it doesn't exist
 os.makedirs('templates', exist_ok=True)
 
 
@@ -164,14 +157,12 @@ def create_github_repo_if_not_exists():
         'Content-Type': 'application/json'
     }
 
-    # Check if repo exists
     check_url = f'https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}'
     response = requests.get(check_url, headers=headers)
 
     if response.status_code == 200:
         return {'success': True, 'message': 'Repository already exists'}
     elif response.status_code == 404:
-        # Create repository
         create_url = 'https://api.github.com/user/repos'
         repo_data = {
             'name': GITHUB_REPO_NAME,
@@ -189,7 +180,7 @@ def create_github_repo_if_not_exists():
         return {'success': False, 'error': f'Failed to check repository: {response.text}'}
 
 
-def upload_to_github(file_path, github_path, commit_message, content_type='file'):
+def upload_to_github(file_path, github_path, commit_message):
     """Upload a file to GitHub repository"""
     if not GITHUB_TOKEN:
         return {'success': False, 'error': 'GitHub token not configured'}
@@ -200,15 +191,12 @@ def upload_to_github(file_path, github_path, commit_message, content_type='file'
         'Content-Type': 'application/json'
     }
 
-    # Read file content
     try:
         with open(file_path, 'rb') as f:
             file_content = f.read()
 
-        # Encode content as base64
         encoded_content = base64.b64encode(file_content).decode('utf-8')
 
-        # Check if file already exists to get SHA
         check_url = f'https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/contents/{github_path}'
         check_response = requests.get(check_url, headers=headers)
 
@@ -216,7 +204,6 @@ def upload_to_github(file_path, github_path, commit_message, content_type='file'
         if check_response.status_code == 200:
             sha = check_response.json()['sha']
 
-        # Upload/update file
         upload_data = {
             'message': commit_message,
             'content': encoded_content
@@ -243,7 +230,6 @@ def upload_to_github(file_path, github_path, commit_message, content_type='file'
 
 def upload_zip_to_github(zip_path, pdf_name, generation_type):
     """Upload ZIP file to GitHub with organized folder structure"""
-    # Create organized path
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     clean_pdf_name = pdf_name.replace('.pdf', '').replace(' ', '_')
     github_path = f'configs/{clean_pdf_name}/{timestamp}_{generation_type}.zip'
@@ -276,12 +262,7 @@ def github_config():
         })
 
     elif request.method == 'POST':
-        # This would be used to update GitHub settings
-        # In production, you'd want proper authentication here
         data = request.get_json()
-
-        # For security, we don't allow changing the token via API
-        # These would need to be set via environment variables
         return jsonify({
             'success': True,
             'message': 'GitHub configuration is managed via environment variables'
@@ -304,7 +285,6 @@ def upload_pdf():
 
         user_session = get_user_session()
 
-        # Save file temporarily with session isolation
         filename = f"{user_session.session_id}_{str(uuid.uuid4())}.pdf"
         file_path = f"/tmp/{filename}"
         file.save(file_path)
@@ -312,15 +292,12 @@ def upload_pdf():
 
         start_time = time.time()
 
-        # Open with pdfplumber
         pdf = pdfplumber.open(file_path)
         page_count = len(pdf.pages)
 
-        # Pre-analyze first page
         first_page = pdf.pages[0]
         sample_words = first_page.extract_words()
 
-        # Store PDF object in user's isolated storage
         user_session.pdfs[filename] = {
             'pdf': pdf,
             'file_path': file_path,
@@ -333,12 +310,10 @@ def upload_pdf():
             }
         }
 
-        # Clear existing fields when new PDF is uploaded
         user_session.page_fields.clear()
 
-        # Initialize server-side extracted data
         user_session.extracted_data = {
-            'pdf_name': file.filename,  # Use original filename
+            'pdf_name': file.filename,
             'total_pages': page_count,
             'created_on': datetime.now().isoformat(),
             'pages': {}
@@ -385,7 +360,6 @@ def get_page(page_num):
         scale = float(request.args.get('scale', 1.0))
         cache_key = f"{filename}_{page_num}_{scale}"
 
-        # Check user's cache first
         if cache_key in user_session.image_cache:
             cached_result = user_session.image_cache[cache_key].copy()
             cached_result['cached'] = True
@@ -400,21 +374,17 @@ def get_page(page_num):
 
         page = pdf.pages[page_num - 1]
 
-        # Consistent resolution calculation
         base_resolution = 150
         resolution = max(100, int(base_resolution * scale))
 
-        # Create high-quality image from PDF page
         img = page.to_image(resolution=resolution, antialias=True)
         pil_img = img.original
 
-        # Use PNG for better quality
         img_buffer = io.BytesIO()
         pil_img.save(img_buffer, format='PNG', optimize=True, compress_level=6)
         img_buffer.seek(0)
         img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
 
-        # Get word count for this page
         text_cache_key = f"{filename}_{page_num}_words"
         if text_cache_key in user_session.text_cache:
             word_count = user_session.text_cache[text_cache_key]
@@ -440,7 +410,6 @@ def get_page(page_num):
             'timestamp': time.time()
         }
 
-        # Cache the result in user's isolated cache
         user_session.image_cache[cache_key] = result.copy()
 
         return jsonify(result)
@@ -475,11 +444,9 @@ def extract_text():
 
         page = pdf.pages[page_num - 1]
 
-        # Extract text from the specified PDF coordinates
         cropped_page = page.crop((x1, y1, x2, y2))
         text = cropped_page.extract_text()
 
-        # Get detailed word information
         words = cropped_page.extract_words()
         word_details = []
 
@@ -583,7 +550,6 @@ def update_extracted_data():
         user_session = get_user_session()
         data = request.get_json()
 
-        # Update the server-side extracted data
         if 'pdf_name' in data:
             user_session.extracted_data['pdf_name'] = data['pdf_name']
         if 'total_pages' in data:
@@ -603,7 +569,7 @@ def update_extracted_data():
 
 @app.route('/add_field_to_extracted_data', methods=['POST'])
 def add_field_to_extracted_data():
-    """Add a field to the extracted data structure"""
+    """Add a simplified field to the extracted data structure"""
     try:
         user_session = get_user_session()
         data = request.get_json()
@@ -612,22 +578,16 @@ def add_field_to_extracted_data():
         field_type = data.get('field_type', 'text')
         coordinates = data.get('coordinates')
         page_num = int(data.get('page_num'))
-        options = data.get('options', [])  # For checkbox fields
 
-        # Initialize page if it doesn't exist
         if str(page_num) not in user_session.extracted_data['pages']:
             user_session.extracted_data['pages'][str(page_num)] = {'fields': []}
 
-        # Add the field
+        # Simplified field data structure - no options for any field type
         field_data = {
             'name': field_name,
-            'type': field_type
+            'type': field_type,
+            'coordinates': coordinates
         }
-
-        if field_type == 'checkbox':
-            field_data['options'] = options
-        else:
-            field_data['coordinates'] = coordinates
 
         user_session.extracted_data['pages'][str(page_num)]['fields'].append(field_data)
 
@@ -641,17 +601,18 @@ def add_field_to_extracted_data():
 
 @app.route('/generate_config_json', methods=['POST'])
 def generate_config_json():
-    """Generate the final configuration JSON with optional script generation and GitHub integration"""
+    """Generate the final configuration JSON with manual scripts and GitHub integration"""
     try:
         user_session = get_user_session()
         data = request.get_json()
 
-        # Get the simple JSON input if provided
-        simple_json_input = data.get('simple_json', {})
-        generate_script = data.get('generate_script', False)
+        # Get manual scripts
+        script1 = data.get('script1', '').strip()
+        script2 = data.get('script2', '').strip()
+        script3 = data.get('script3', '').strip()
         upload_to_github_flag = data.get('upload_to_github', False)
 
-        # Create the config data
+        # Create the simplified config data
         config_data = {
             'pdf_name': user_session.extracted_data['pdf_name'],
             'total_pages': user_session.extracted_data['total_pages'],
@@ -659,29 +620,6 @@ def generate_config_json():
             'pages': user_session.extracted_data['pages']
         }
 
-        # If simple JSON provided, transform it and add populated data
-        if simple_json_input:
-            try:
-                # Generate transformation script
-                script_code = generate_transformation_script(user_session.extracted_data)
-
-                # Execute the script with the provided simple JSON
-                populated_config = execute_transformation_script(script_code, simple_json_input)
-
-                # Merge the populated data with the base config
-                config_data['populated_data'] = populated_config
-                config_data['source_simple_json'] = simple_json_input
-                config_data['data_populated'] = True
-
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'error': f'Error processing simple JSON: {str(e)}'
-                })
-        else:
-            config_data['data_populated'] = False
-
-        # Create config filename
         base_name = user_session.extracted_data['pdf_name'].replace('.pdf', '')
         config_filename = f"{base_name}_config_{int(time.time())}.json"
 
@@ -692,153 +630,92 @@ def generate_config_json():
 
         user_session.temp_files.append(config_temp_path)
 
-        # If script generation requested, create script file too
-        script_temp_path = None
-        script_filename = None
+        # Create ZIP file with config and scripts
+        zip_filename = f"{base_name}_complete_package_{int(time.time())}.zip"
 
-        if generate_script:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as zip_temp:
+            zip_temp_path = zip_temp.name
+
+        with zipfile.ZipFile(zip_temp_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Add config JSON
+            zipf.write(config_temp_path, config_filename)
+
+            # Add manual scripts if provided
+            if script1:
+                zipf.writestr('script1.py', script1)
+            if script2:
+                zipf.writestr('script2.py', script2)
+            if script3:
+                zipf.writestr('script3.py', script3)
+
+            # Add README
+            readme_content = create_package_readme(config_data, script1, script2, script3)
+            zipf.writestr('README.md', readme_content)
+
+        user_session.temp_files.append(zip_temp_path)
+
+        # Handle GitHub upload if requested
+        if upload_to_github_flag and GITHUB_TOKEN:
             try:
-                script_code = generate_transformation_script(user_session.extracted_data)
-                complete_script = create_complete_script_file(script_code, user_session.extracted_data)
+                # Ensure repo exists
+                repo_result = create_github_repo_if_not_exists()
+                if not repo_result['success']:
+                    return jsonify({
+                        'success': False,
+                        'error': f'GitHub setup failed: {repo_result["error"]}'
+                    })
 
-                script_filename = f"{base_name}_transformer_{int(time.time())}.py"
+                # Upload to GitHub
+                generation_type = 'simplified_checkbox_package'
+                github_result = upload_zip_to_github(
+                    zip_temp_path,
+                    user_session.extracted_data['pdf_name'],
+                    generation_type
+                )
 
-                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py', encoding='utf-8') as f:
-                    f.write(complete_script)
-                    script_temp_path = f.name
-
-                user_session.temp_files.append(script_temp_path)
+                if github_result['success']:
+                    return jsonify({
+                        'success': True,
+                        'message': 'Package uploaded to GitHub successfully!',
+                        'github_url': github_result['url'],
+                        'download_url': github_result['download_url'],
+                        'uploaded_to_github': True
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': f'GitHub upload failed: {github_result["error"]}'
+                    })
 
             except Exception as e:
                 return jsonify({
                     'success': False,
-                    'error': f'Error generating script: {str(e)}'
+                    'error': f'GitHub upload error: {str(e)}'
                 })
 
-        # Create a ZIP file containing both files if script requested
-        if generate_script and script_temp_path:
-            zip_filename = f"{base_name}_complete_package_{int(time.time())}.zip"
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as zip_temp:
-                zip_temp_path = zip_temp.name
-
-            with zipfile.ZipFile(zip_temp_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(config_temp_path, config_filename)
-                zipf.write(script_temp_path, script_filename)
-
-                # Add README
-                readme_content = create_package_readme(config_data, simple_json_input)
-                zipf.writestr('README.md', readme_content)
-
-            user_session.temp_files.append(zip_temp_path)
-
-            # Handle GitHub upload if requested
-            if upload_to_github_flag and GITHUB_TOKEN:
-                try:
-                    # Ensure repo exists
-                    repo_result = create_github_repo_if_not_exists()
-                    if not repo_result['success']:
-                        return jsonify({
-                            'success': False,
-                            'error': f'GitHub setup failed: {repo_result["error"]}'
-                        })
-
-                    # Upload to GitHub
-                    generation_type = 'populated_package' if simple_json_input else 'config_package'
-                    github_result = upload_zip_to_github(
-                        zip_temp_path,
-                        user_session.extracted_data['pdf_name'],
-                        generation_type
-                    )
-
-                    if github_result['success']:
-                        return jsonify({
-                            'success': True,
-                            'message': 'Package uploaded to GitHub successfully!',
-                            'github_url': github_result['url'],
-                            'download_url': github_result['download_url'],
-                            'uploaded_to_github': True
-                        })
-                    else:
-                        return jsonify({
-                            'success': False,
-                            'error': f'GitHub upload failed: {github_result["error"]}'
-                        })
-
-                except Exception as e:
-                    return jsonify({
-                        'success': False,
-                        'error': f'GitHub upload error: {str(e)}'
-                    })
-
-            # Return ZIP file for download
-            return send_file(zip_temp_path, as_attachment=True, download_name=zip_filename)
-
-        else:
-            # Handle GitHub upload for config only
-            if upload_to_github_flag and GITHUB_TOKEN:
-                try:
-                    # Ensure repo exists
-                    repo_result = create_github_repo_if_not_exists()
-                    if not repo_result['success']:
-                        return jsonify({
-                            'success': False,
-                            'error': f'GitHub setup failed: {repo_result["error"]}'
-                        })
-
-                    # Upload to GitHub
-                    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                    clean_pdf_name = user_session.extracted_data['pdf_name'].replace('.pdf', '').replace(' ', '_')
-                    github_path = f'configs/{clean_pdf_name}/{timestamp}_config_only.json'
-
-                    commit_message = f'Add configuration for {user_session.extracted_data["pdf_name"]} - {timestamp}'
-                    github_result = upload_to_github(config_temp_path, github_path, commit_message)
-
-                    if github_result['success']:
-                        return jsonify({
-                            'success': True,
-                            'message': 'Configuration uploaded to GitHub successfully!',
-                            'github_url': github_result['url'],
-                            'download_url': github_result['download_url'],
-                            'uploaded_to_github': True
-                        })
-                    else:
-                        return jsonify({
-                            'success': False,
-                            'error': f'GitHub upload failed: {github_result["error"]}'
-                        })
-
-                except Exception as e:
-                    return jsonify({
-                        'success': False,
-                        'error': f'GitHub upload error: {str(e)}'
-                    })
-
-            # Just return the config JSON for download
-            return send_file(config_temp_path, as_attachment=True, download_name=config_filename)
+        # Return ZIP file for download
+        return send_file(zip_temp_path, as_attachment=True, download_name=zip_filename)
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
 
-def create_package_readme(config_data, simple_json_input):
-    """Create a README file for the package"""
-
-    readme = f"""# PDF Configuration Package
+def create_package_readme(config_data, script1, script2, script3):
+    """Create a README file for the simplified package"""
+    readme = f"""# PDF Configuration Package - Simplified Checkboxes
 
 Generated by OkayDocay Enhanced on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ## Contents
 
-1. **Configuration JSON** - The PDF field configuration
-2. **Transformer Script** - Python script to convert simple JSON to config format
+1. **Configuration JSON** - The PDF field configuration with simplified checkboxes
+2. **Custom Python Scripts** - Your manual scripts for processing
 3. **README.md** - This file
 
 ## Configuration Details
 
 - **PDF:** {config_data['pdf_name']}
 - **Total Pages:** {config_data['total_pages']}
-- **Data Populated:** {'Yes' if config_data.get('data_populated', False) else 'No'}
 
 ### Field Summary
 """
@@ -858,464 +735,83 @@ Generated by OkayDocay Enhanced on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 - **Total Fields:** {total_fields}
 - **Text Fields:** {field_types['text']}
 - **Signature Fields:** {field_types['signature']}
-- **Checkbox Fields:** {field_types['checkbox']}
+- **Checkbox Fields (Simple Tick Boxes):** {field_types['checkbox']}
 
+## Simplified Checkbox Implementation
+
+All checkbox fields are now simple tick boxes with just coordinates - no multiple options.
+Each checkbox field represents a single tickable area on the PDF.
+
+## Field Structure
+
+```json
+{{
+  "name": "field_name",
+  "type": "checkbox",
+  "coordinates": "x1,y1,x2,y2"
+}}
+```
+
+## Custom Scripts Included
+
+"""
+
+    if script1:
+        readme += "- **script1.py** - Custom processing script\n"
+    if script2:
+        readme += "- **script2.py** - Custom processing script\n"
+    if script3:
+        readme += "- **script3.py** - Custom processing script\n"
+
+    if not any([script1, script2, script3]):
+        readme += "- No custom scripts were provided\n"
+
+    readme += """
 ## Usage
 
-### Using the Transformer Script
+### Using the Configuration JSON
+
+The configuration JSON contains all the field definitions and can be used with any PDF processing system that supports field-based form filling.
+
+### Using Custom Scripts
+
+Run your custom Python scripts as needed:
 
 ```bash
-# Test the script
-python {config_data['pdf_name'].replace('.pdf', '')}_transformer_*.py --test
-
-# Transform your data
-python {config_data['pdf_name'].replace('.pdf', '')}_transformer_*.py input.json output_config.json
+python script1.py
+python script2.py  
+python script3.py
 ```
 
-### Simple JSON Format
+### Example Field Access
 
-For text and signature fields:
-```json
-{{
-    "field_name": "value"
-}}
+```python
+import json
+
+# Load configuration
+with open('config.json', 'r') as f:
+    config = json.load(f)
+
+# Access fields by page
+for page_num, page_data in config['pages'].items():
+    print(f"Page {page_num} fields:")
+    for field in page_data['fields']:
+        print(f"  - {field['name']} ({field['type']}): {field['coordinates']}")
 ```
 
-For checkbox fields:
-```json
-{{
-    "checkbox_group/option_name": true,
-    "checkbox_group/other_option": false
-}}
-```
-
-"""
-
-    if simple_json_input:
-        readme += f"""### Example Input Used
-
-```json
-{json.dumps(simple_json_input, indent=2)}
-```
-
-"""
-
-    readme += """## Integration
-
-The configuration JSON can be used with any PDF processing system that supports field-based form filling. The transformer script makes it easy to convert simple data formats into the required configuration structure.
-
-Generated by OkayDocay Enhanced - PDF Configuration Maker
+Generated by OkayDocay Enhanced - PDF Configuration Maker with Simplified Checkboxes
 """
 
     return readme
 
 
-def generate_transformation_script(extracted_data):
-    """
-    Generate simple transformation script - coordinates are just metadata!
-    Focus on field name matching and value assignment only.
-    """
-
-    pdf_name = extracted_data.get('pdf_name', 'document.pdf')
-    total_pages = extracted_data.get('total_pages', 1)
-
-    script = f'''#!/usr/bin/env python3
-"""
-Simple PDF Configuration Transformer
-Source: {pdf_name}
-Pages: {total_pages}
-
-This script transforms simple JSON input to PDF config format by:
-1. Matching field names between input and field definitions
-2. Copying field definitions and adding values
-3. Preserving coordinates and metadata as-is
-"""
-
-import json
-import sys
-from datetime import datetime
-
-# Field definitions from PDF analysis (coordinates are just metadata)
-FIELD_DEFINITIONS = {json.dumps(extracted_data, indent=4)}
-
-def transform_simple_to_config(simple_json):
-    """
-    Transform simple input to config format.
-    Coordinates are irrelevant - just match names and copy values.
-    """
-    result = {{
-        'pdf_name': FIELD_DEFINITIONS['pdf_name'],
-        'total_pages': FIELD_DEFINITIONS['total_pages'], 
-        'processed_on': datetime.now().isoformat(),
-        'pages': {{}}
-    }}
-
-    # Process each page's field definitions
-    for page_num, page_data in FIELD_DEFINITIONS['pages'].items():
-        result['pages'][page_num] = {{'fields': []}}
-
-        for field_def in page_data.get('fields', []):
-            field_name = field_def['name']
-            field_type = field_def.get('type', 'text')
-
-            # Handle different field types
-            if field_type == 'checkbox':
-                # For checkboxes, look for group/option pattern
-                checkbox_options = []
-                for input_key, input_value in simple_json.items():
-                    if input_key.startswith(field_name + '/') and input_value:
-                        option_name = input_key.split('/', 1)[1]
-                        checkbox_options.append({{
-                            'name': option_name,
-                            'checked': True,
-                            'coordinates': field_def.get('coordinates', ''),
-                            'page': int(page_num)
-                        }})
-
-                if checkbox_options:
-                    result['pages'][page_num]['fields'].append({{
-                        'name': field_name,
-                        'type': 'checkbox',
-                        'options': checkbox_options
-                    }})
-
-            else:
-                # Regular fields (text/signature) - simple name matching
-                if field_name in simple_json:
-                    # Copy the field definition and add the value
-                    output_field = field_def.copy()  # Preserves coordinates, type, etc.
-                    output_field['value'] = str(simple_json[field_name])
-                    result['pages'][page_num]['fields'].append(output_field)
-
-    # Remove empty pages
-    result['pages'] = {{page: data for page, data in result['pages'].items() 
-                      if data['fields']}}
-
-    return result
-
-
-def main():
-    """Command line interface"""
-    if len(sys.argv) < 2:
-        print("Usage: python script.py input.json [output.json]")
-        print("   or: python script.py --test")
-        sys.exit(1)
-
-    if sys.argv[1] == "--test":
-        # Generate test data based on field definitions
-        test_data = {{}}
-
-        for page_data in FIELD_DEFINITIONS['pages'].values():
-            for field_def in page_data.get('fields', []):
-                field_name = field_def['name']
-                field_type = field_def.get('type', 'text')
-
-                if field_type == 'checkbox':
-                    test_data[f"{{field_name}}/option1"] = True
-                    test_data[f"{{field_name}}/option2"] = False
-                elif field_type == 'signature':
-                    test_data[field_name] = "sample_signature_data"
-                else:
-                    test_data[field_name] = f"sample_{{field_name}}_value"
-
-        print("🧪 Testing with generated sample data:")
-        print(json.dumps(test_data, indent=2))
-        print("\\n" + "="*60 + "\\n")
-
-        result = transform_simple_to_config(test_data)
-        print("📄 Transformed config:")
-        print(json.dumps(result, indent=2))
-
-        # Show field mapping summary
-        print("\\n" + "="*60)
-        print("📊 FIELD MAPPING SUMMARY:")
-        for page_num, page_data in result['pages'].items():
-            print(f"  Page {{page_num}}: {{len(page_data['fields'])}} fields populated")
-            for field in page_data['fields']:
-                if 'value' in field:
-                    print(f"    ✓ {{field['name']}} = {{field['value']}}")
-                elif field['type'] == 'checkbox':
-                    checked = [opt['name'] for opt in field.get('options', []) if opt.get('checked')]
-                    print(f"    ☑ {{field['name']}} = {{checked}}")
-
-        return
-
-    # Process actual files
-    input_file = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else input_file.replace('.json', '_config.json')
-
-    try:
-        with open(input_file, 'r', encoding='utf-8') as f:
-            simple_data = json.load(f)
-
-        print(f"📖 Reading: {{input_file}}")
-        config_data = transform_simple_to_config(simple_data)
-
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(config_data, f, indent=2, ensure_ascii=False)
-
-        # Summary
-        total_fields = sum(len(page['fields']) for page in config_data['pages'].values())
-        print(f"✅ Transformed {{input_file}} → {{output_file}}")
-        print(f"📊 {{total_fields}} fields populated across {{len(config_data['pages'])}} pages")
-
-    except Exception as e:
-        print(f"❌ Error: {{e}}")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-'''
-
-    return script
-
-
-def analyze_field_patterns(pages):
-    """Analyze the field configuration to understand patterns"""
-    analysis = {
-        'text_fields': [],
-        'signature_fields': [],
-        'checkbox_groups': {},
-        'page_mapping': {}
-    }
-
-    for page_num, page_data in pages.items():
-        analysis['page_mapping'][page_num] = []
-
-        for field in page_data.get('fields', []):
-            field_info = {
-                'name': field['name'],
-                'page': int(page_num)
-            }
-
-            if field.get('coordinates'):
-                field_info['coordinates'] = field['coordinates']
-
-            analysis['page_mapping'][page_num].append(field_info)
-
-            # Categorize field types
-            if field.get('type') == 'checkbox':
-                # Handle checkbox groups
-                checkbox_name = field['name']
-                if checkbox_name not in analysis['checkbox_groups']:
-                    analysis['checkbox_groups'][checkbox_name] = []
-
-                for option in field.get('options', []):
-                    analysis['checkbox_groups'][checkbox_name].append({
-                        'name': option['name'],
-                        'coordinates': option['coordinates'],
-                        'page': option['page']
-                    })
-            elif field.get('type') == 'signature':
-                analysis['signature_fields'].append(field_info)
-            else:  # text field
-                analysis['text_fields'].append(field_info)
-
-    return analysis
-
-
-def generate_field_processing_logic(analysis):
-    """Generate the field processing logic based on analysis"""
-    lines = [
-        "    # Initialize page structure",
-        "    page_structure = {}",
-        "    for i in range(1, result['total_pages'] + 1):",
-        "        page_structure[i] = {'fields': []}",
-        "",
-        "    # Process each field type",
-        "",
-    ]
-
-    # Process text fields
-    if analysis['text_fields']:
-        lines.append("    # Text Fields Processing")
-        for field in analysis['text_fields']:
-            lines.extend([
-                f"    if '{field['name']}' in simple_json:",
-                f"        page_structure[{field['page']}]['fields'].append({{",
-                f"            'name': '{field['name']}',",
-                f"            'value': simple_json['{field['name']}'],",
-                f"            'coordinates': '{field.get('coordinates', '')}',",
-                f"            'type': 'text'",
-                f"        }})",
-                "",
-            ])
-
-    # Process signature fields
-    if analysis['signature_fields']:
-        lines.append("    # Signature Fields Processing")
-        for field in analysis['signature_fields']:
-            lines.extend([
-                f"    if '{field['name']}' in simple_json:",
-                f"        page_structure[{field['page']}]['fields'].append({{",
-                f"            'name': '{field['name']}',",
-                f"            'value': simple_json['{field['name']}'],",
-                f"            'coordinates': '{field.get('coordinates', '')}',",
-                f"            'type': 'signature'",
-                f"        }})",
-                "",
-            ])
-
-    # Process checkbox groups
-    if analysis['checkbox_groups']:
-        lines.append("    # Checkbox Groups Processing")
-        for group_name, options in analysis['checkbox_groups'].items():
-            safe_group_name = group_name.replace('-', '_').replace(' ', '_')
-            lines.extend([
-                f"    # Checkbox group: {group_name}",
-                f"    checkbox_options_{safe_group_name} = []",
-            ])
-
-            for option in options:
-                lines.extend([
-                    f"    if '{group_name}/{option['name']}' in simple_json and simple_json['{group_name}/{option['name']}']:",
-                    f"        checkbox_options_{safe_group_name}.append({{",
-                    f"            'name': '{option['name']}',",
-                    f"            'checked': True,",
-                    f"            'coordinates': '{option['coordinates']}',",
-                    f"            'page': {option['page']}",
-                    f"        }})",
-                ])
-
-            # Add the checkbox group to the appropriate page
-            first_page = min(opt['page'] for opt in options)
-            lines.extend([
-                f"    if checkbox_options_{safe_group_name}:",
-                f"        page_structure[{first_page}]['fields'].append({{",
-                f"            'name': '{group_name}',",
-                f"            'type': 'checkbox',",
-                f"            'options': checkbox_options_{safe_group_name}",
-                f"        }})",
-                "",
-            ])
-
-    return lines
-
-
-def execute_transformation_script(script_code, test_json):
-    """Safely execute the transformation script with test data"""
-
-    # Create a safe execution environment
-    safe_globals = {
-        '__builtins__': {
-            'len': len,
-            'str': str,
-            'int': int,
-            'float': float,
-            'bool': bool,
-            'list': list,
-            'dict': dict,
-            'min': min,
-            'max': max,
-            'range': range,
-        },
-        'json': __import__('json'),
-        'datetime': __import__('datetime'),
-    }
-
-    # Execute the script
-    exec(script_code, safe_globals)
-
-    # Get the transformation function
-    transform_func = safe_globals.get('transform_simple_to_config')
-
-    if not transform_func:
-        raise Exception("Transformation function not found in script")
-
-    # Execute with test data
-    result = transform_func(test_json)
-
-    return result
-
-
-def create_complete_script_file(script_code, extracted_data):
-    """Create a complete, standalone Python script file"""
-
-    header = f'''#!/usr/bin/env python3
-"""
-PDF Configuration Transformer
-Generated by OkayDocay Enhanced
-
-This script transforms simple JSON data into the PDF configuration format
-required for processing PDF forms.
-
-Configuration: {extracted_data.get('pdf_name', 'Unknown')}
-Generated on: {datetime.now().isoformat()}
-Total Pages: {extracted_data.get('total_pages', 'Unknown')}
-"""
-
-import json
-import sys
-from datetime import datetime
-
-
-'''
-
-    footer = '''
-
-def main():
-    """Main function for command line usage"""
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <input_json_file> [output_file]")
-        print("   or: python script.py --test")
-        sys.exit(1)
-
-    if sys.argv[1] == "--test":
-        # Run with test data
-        test_data = {
-            "example_field": "Test Value",
-            "checkbox_group/option1": True,
-            "checkbox_group/option2": False,
-            "signature_field": "SignatureBase64Data"
-        }
-
-        print("Testing with sample data:")
-        print(json.dumps(test_data, indent=2))
-        print("\\n" + "="*50 + "\\n")
-
-        result = transform_simple_to_config(test_data)
-        print("Transformed result:")
-        print(json.dumps(result, indent=2))
-        return
-
-    # Read input file
-    input_file = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else input_file.replace('.json', '_config.json')
-
-    try:
-        with open(input_file, 'r', encoding='utf-8') as f:
-            simple_data = json.load(f)
-
-        # Transform the data
-        config_data = transform_simple_to_config(simple_data)
-
-        # Write output
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(config_data, f, indent=2, ensure_ascii=False)
-
-        print(f"Successfully transformed {{input_file}} -> {{output_file}}")
-
-    except Exception as e:
-        print(f"Error: {{e}}")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-'''
-
-    return header + script_code + footer
-
-
 if __name__ == '__main__':
-    print("🚀 OkayDocay Enhanced with GitHub Integration")
-    print("📄 PDF Configuration Maker with Transformer Scripts")
+    print("🚀 OkayDocay Enhanced with Simplified Checkboxes")
+    print("📄 PDF Configuration Maker with Simple Tick Box Fields")
     print("🐙 GitHub Repository Integration")
     print("🌐 http://localhost:5000")
     print("=" * 60)
 
-    # Check GitHub configuration
     if GITHUB_TOKEN:
         print(f"✅ GitHub configured: {GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}")
     else:
