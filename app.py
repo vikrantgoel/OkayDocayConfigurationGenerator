@@ -273,6 +273,11 @@ def github_config():
 def upload_pdf():
     """Handle PDF file upload with user isolation"""
     try:
+        # Ensure /tmp exists on Windows (acts as a patch)
+        if not os.path.exists("/tmp"):
+            os.makedirs("/tmp")
+
+
         if 'pdf_file' not in request.files:
             return jsonify({'success': False, 'error': 'No file uploaded'})
 
@@ -285,9 +290,14 @@ def upload_pdf():
 
         user_session = get_user_session()
 
+        # ✅ Quick patch for Windows
+        if not os.path.exists("/tmp"):
+            os.makedirs("/tmp")
+
         filename = f"{user_session.session_id}_{str(uuid.uuid4())}.pdf"
         file_path = f"/tmp/{filename}"
         file.save(file_path)
+
         user_session.temp_files.append(file_path)
 
         start_time = time.time()
