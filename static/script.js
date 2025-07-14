@@ -831,13 +831,19 @@ function endSelection(event) {
 }
 
 function updateCoordinateFields(x1, y1, x2, y2) {
+    // Use higher precision - round to 2 decimal places instead of whole numbers
+    const precision = 100; // For 2 decimal places
+
     const coordinateFields = {
-        'pdf_x1': Math.round(x1 * 10) / 10,
-        'pdf_y1': Math.round(y1 * 10) / 10,
-        'pdf_x2': Math.round(x2 * 10) / 10,
-        'pdf_y2': Math.round(y2 * 10) / 10,
-        'coord-input': `${Math.round(x1)},${Math.round(y1)},${Math.round(x2)},${Math.round(y2)}`,
-        'current-coords': `${Math.round(x1)},${Math.round(y1)},${Math.round(x2)},${Math.round(y2)}`
+        // Individual coordinate fields with 2 decimal places
+        'pdf_x1': Math.round(x1 * precision) / precision,
+        'pdf_y1': Math.round(y1 * precision) / precision,
+        'pdf_x2': Math.round(x2 * precision) / precision,
+        'pdf_y2': Math.round(y2 * precision) / precision,
+
+        // Combined coordinate fields with 2 decimal places (not rounded to whole numbers)
+        'coord-input': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`,
+        'current-coords': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`
     };
 
     Object.entries(coordinateFields).forEach(([id, value]) => {
@@ -851,6 +857,7 @@ function updateCoordinateFields(x1, y1, x2, y2) {
     validateField();
 }
 
+//   the validateAndUpdateCoordinates function to maintain precision
 function validateAndUpdateCoordinates() {
     const coordElements = ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2'];
     const coords = coordElements.map(id => {
@@ -859,12 +866,18 @@ function validateAndUpdateCoordinates() {
     });
 
     const coordInput = document.getElementById('coord-input');
-    if (coordInput) coordInput.value = coords.join(',');
+    if (coordInput) {
+        // Maintain precision in the coordinate input field too
+        const precision = 100; // 2 decimal places
+        const preciseCoords = coords.map(coord => Math.round(coord * precision) / precision);
+        coordInput.value = preciseCoords.join(',');
+    }
 
     updateDebugInfo(`Manual PDF coords: (${coords.join(', ')})`);
     showArea();
 }
 
+//   the updateCoordinatesFromInput function for better precision handling
 function updateCoordinatesFromInput() {
     const coordInput = document.getElementById('coord-input');
     if (!coordInput) return;
@@ -873,12 +886,67 @@ function updateCoordinatesFromInput() {
     const coords = input.split(',').map(x => parseFloat(x.trim()));
 
     if (coords.length === 4 && coords.every(x => !isNaN(x))) {
+        // Maintain the precision when updating individual fields
         ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2'].forEach((id, index) => {
             const element = document.getElementById(id);
-            if (element) element.value = coords[index];
+            if (element) {
+                // Keep the original precision, don't round again
+                element.value = coords[index];
+            }
         });
         showArea();
     }
+}
+
+//   even higher precision (3 decimal places)
+function updateCoordinateFieldsHighPrecision(x1, y1, x2, y2) {
+    // Use 3 decimal places for even higher precision
+    const precision = 1000; // For 3 decimal places
+
+    const coordinateFields = {
+        // Individual coordinate fields with 3 decimal places
+        'pdf_x1': Math.round(x1 * precision) / precision,
+        'pdf_y1': Math.round(y1 * precision) / precision,
+        'pdf_x2': Math.round(x2 * precision) / precision,
+        'pdf_y2': Math.round(y2 * precision) / precision,
+
+        // Combined coordinate fields with 3 decimal places
+        'coord-input': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`,
+        'current-coords': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`
+    };
+
+    Object.entries(coordinateFields).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.value = value;
+    });
+
+    hasValidSelection = true;
+    enableExtractionControls(true);
+    updateStepIndicator('select');
+    validateField();
+}
+
+// No rounding version (maximum precision)
+function updateCoordinateFieldsNorounding(x1, y1, x2, y2) {
+    const coordinateFields = {
+        // Keep original precision, no rounding at all
+        'pdf_x1': x1,
+        'pdf_y1': y1,
+        'pdf_x2': x2,
+        'pdf_y2': y2,
+        'coord-input': `${x1},${y1},${x2},${y2}`,
+        'current-coords': `${x1},${y1},${x2},${y2}`
+    };
+
+    Object.entries(coordinateFields).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.value = value;
+    });
+
+    hasValidSelection = true;
+    enableExtractionControls(true);
+    updateStepIndicator('select');
+    validateField();
 }
 
 function clearSelectionOnly() {
@@ -1044,21 +1112,37 @@ async function extractText() {
 // ================================
 
 function showHighlight(x1, y1, x2, y2, color = '#ef4444') {
-    if (!canvasContainer) return;
+    if (!canvasContainer || !pdfCanvas) return;
 
     const highlight = document.createElement('div');
     highlight.className = 'highlight-box';
+
+    // Same padding-aware positioning for highlights
+    const containerStyle = window.getComputedStyle(canvasContainer);
+    const containerPaddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
+    const containerPaddingTop = parseFloat(containerStyle.paddingTop) || 0;
+
+    const canvasRect = pdfCanvas.getBoundingClientRect();
+    const containerRect = canvasContainer.getBoundingClientRect();
+
+    const canvasOffsetX = canvasRect.left - containerRect.left - containerPaddingLeft;
+    const canvasOffsetY = canvasRect.top - containerRect.top - containerPaddingTop;
+
+    const finalLeft = containerPaddingLeft + canvasOffsetX + x1;
+    const finalTop = containerPaddingTop + canvasOffsetY + y1 + canvasContainer.scrollTop;
+
     highlight.style.cssText = `
         position: absolute;
-        left: ${x1}px;
-        top: ${y1}px;
+        left: ${finalLeft}px;
+        top: ${finalTop}px;
         width: ${x2 - x1}px;
         height: ${y2 - y1}px;
         border: 2px solid ${color};
         background: ${color}33;
         pointer-events: none;
-        z-index: 10;
+        z-index: 999;
         border-radius: 2px;
+        box-shadow: 0 0 8px ${color}44;
         animation: highlightPulse 2s ease-in-out infinite;
     `;
 
@@ -1067,7 +1151,7 @@ function showHighlight(x1, y1, x2, y2, color = '#ef4444') {
 
 function showSelectionBox(start, end) {
     clearSelectionBox();
-    if (!canvasContainer) return;
+    if (!canvasContainer || !pdfCanvas) return;
 
     const box = document.createElement('div');
     box.className = 'selection-box';
@@ -1078,21 +1162,42 @@ function showSelectionBox(start, end) {
     const width = Math.abs(end.x - start.x);
     const height = Math.abs(end.y - start.y);
 
+    // CRITICAL: Account for container padding and canvas position
+    const containerStyle = window.getComputedStyle(canvasContainer);
+    const containerPaddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
+    const containerPaddingTop = parseFloat(containerStyle.paddingTop) || 0;
+
+    // Get canvas position within the padded container
+    const canvasRect = pdfCanvas.getBoundingClientRect();
+    const containerRect = canvasContainer.getBoundingClientRect();
+
+    // Calculate offset including padding
+    const canvasOffsetX = canvasRect.left - containerRect.left - containerPaddingLeft;
+    const canvasOffsetY = canvasRect.top - containerRect.top - containerPaddingTop;
+
+    // Position the selection box
+    const finalLeft = containerPaddingLeft + canvasOffsetX + left;
+    const finalTop = containerPaddingTop + canvasOffsetY + top + canvasContainer.scrollTop;
+
     box.style.cssText = `
         position: absolute;
-        left: ${left}px;
-        top: ${top}px;
+        left: ${finalLeft}px;
+        top: ${finalTop}px;
         width: ${width}px;
         height: ${height}px;
         border: 2px dashed #2563eb;
         background: rgba(37, 99, 235, 0.05);
         pointer-events: none;
-        z-index: 10;
+        z-index: 1000;
         border-radius: 2px;
-        animation: selectionBlink 1.5s ease-in-out infinite;
+        box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
     `;
 
     canvasContainer.appendChild(box);
+
+    console.log(`Selection positioned: left=${finalLeft}, top=${finalTop}`);
+    console.log(`Container padding: left=${containerPaddingLeft}, top=${containerPaddingTop}`);
+    console.log(`Canvas offset: x=${canvasOffsetX}, y=${canvasOffsetY}`);
 }
 
 function clearSelectionBox() {

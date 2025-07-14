@@ -223,17 +223,7 @@
                             <textarea id="script1" placeholder="# Your first Python script goes here
 # Example for simplified checkboxes:
 # import json
-#
-# def process_checkbox_fields(config):
-#     for page_num, page_data in config['pages'].items():
-#         for field in page_data['fields']:
-#             if field['type'] == 'checkbox':
-#                 print(f'Simple checkbox: {field[&quot;name&quot;]} at {field[&quot;coordinates&quot;]}')
-#
-# if __name__ == '__main__':
-#     with open('config.json', 'r') as f:
-#         config = json.load(f)
-#     process_checkbox_fields(config)"></textarea>
+ "></textarea>
                             <div class="script-info">Optional - Will be saved as script1.py</div>
                         </div>
 
@@ -245,22 +235,7 @@
 # import json
 #
 # def extract_field_coordinates(config):
-#     field_map = {}
-#     for page_num, page_data in config['pages'].items():
-#         for field in page_data['fields']:
-#             coords = field['coordinates'].split(',')
-#             field_map[field['name']] = {
-#                 'type': field['type'],
-#                 'page': page_num,
-#                 'coordinates': [float(c) for c in coords]
-#             }
-#     return field_map
-#
-# if __name__ == '__main__':
-#     with open('config.json', 'r') as f:
-#         config = json.load(f)
-#     fields = extract_field_coordinates(config)
-#     print(json.dumps(fields, indent=2))"></textarea>
+ "></textarea>
                             <div class="script-info">Optional - Will be saved as script2.py</div>
                         </div>
 
@@ -272,27 +247,7 @@
 # import json
 #
 # def generate_form_template(config):
-#     html = '<form>\n'
-#     for page_num, page_data in config['pages'].items():
-#         html += f'  <!-- Page {page_num} fields -->\n'
-#         for field in page_data['fields']:
-#             if field['type'] == 'checkbox':
-#                 html += f'  <input type=&quot;checkbox&quot; name=&quot;{field[&quot;name&quot;]}&quot; id=&quot;{field[&quot;name&quot;]}&quot;>\n'
-#                 html += f'  <label for=&quot;{field[&quot;name&quot;]}&quot;>{field[&quot;name&quot;].replace(&quot;_&quot;, &quot; &quot;).title()}</label><br>\n'
-#             elif field['type'] == 'text':
-#                 html += f'  <input type=&quot;text&quot; name=&quot;{field[&quot;name&quot;]}&quot; placeholder=&quot;{field[&quot;name&quot;].replace(&quot;_&quot;, &quot; &quot;).title()}&quot;>\n'
-#             elif field['type'] == 'signature':
-#                 html += f'  <input type=&quot;text&quot; name=&quot;{field[&quot;name&quot;]}&quot; placeholder=&quot;Signature: {field[&quot;name&quot;].replace(&quot;_&quot;, &quot; &quot;).title()}&quot;>\n'
-#     html += '</form>'
-#     return html
-#
-# if __name__ == '__main__':
-#     with open('config.json', 'r') as f:
-#         config = json.load(f)
-#     form_html = generate_form_template(config)
-#     with open('form_template.html', 'w') as f:
-#         f.write(form_html)
-#     print('Form template generated: form_template.html')"></textarea>
+ "></textarea>
                             <div class="script-info">Optional - Will be saved as script3.py</div>
                         </div>
                     </div>
