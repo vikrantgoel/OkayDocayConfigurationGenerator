@@ -558,23 +558,69 @@ body {
    CANVAS CONTAINER
    ================================ */
 
+
 .canvas-container {
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-xl);
-    overflow: auto;
     background: var(--white);
     position: relative;
     flex: 1;
     box-shadow: var(--shadow-sm);
+
+    /* CHANGED: Enable both vertical AND horizontal scrolling */
+    overflow-y: auto;
+    overflow-x: auto;  /* Changed from 'hidden' to 'auto' */
+
+    /* Set a fixed height to enable scrolling */
+    height: 100%;
+    max-height: calc(100vh - 300px);
+
+    /* Center content horizontally */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    /* Add some padding */
+    padding: var(--space-4);
 }
 
 #pdf-canvas {
     cursor: crosshair;
     display: block;
-    max-width: 100%;
+
+    /* CHANGED: Remove max-width constraint to allow horizontal scrolling */
+    max-width: none;  /* Changed from '100%' to 'none' */
+
     height: auto;
+    margin: 0 auto;
+    object-fit: contain;
 }
 
+/* Custom scrollbar styling for BOTH directions */
+.canvas-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;  /* Added height for horizontal scrollbar */
+}
+
+.canvas-container::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 4px;
+}
+
+.canvas-container::-webkit-scrollbar-thumb {
+    background: var(--gray-400);
+    border-radius: 4px;
+}
+
+.canvas-container::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-500);
+}
+
+/* Firefox scrollbar for both directions */
+.canvas-container {
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-400) var(--gray-100);
+}
 /* ================================
    CONTROLS PANEL
    ================================ */
