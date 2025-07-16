@@ -447,6 +447,25 @@ body {
     box-shadow: var(--shadow-xs);
 }
 
+/* FOR THE ADD ANOTHER BUTTON */
+
+.btn.warning {
+    background: var(--warning);
+    color: var(--white);
+    border-color: var(--warning);
+}
+
+.btn.warning:hover:not(:disabled) {
+    background: var(--warning-600);
+    border-color: var(--warning-600);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Hide the button initially */
+#add-another-pdf-btn {
+    display: none;
+}
+
 /* ================================
    ENHANCED BUTTONS
    ================================ */
@@ -1568,6 +1587,225 @@ body {
     scrollbar-width: thin;
     scrollbar-color: var(--gray-300) var(--gray-100);
 }
+
+.editor-wrapper {
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.monaco-editor-container {
+    height: 250px;
+    background: #1e1e1e;
+}
+
+.editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--gray-75);
+    border-top: 1px solid var(--gray-200);
+    font-size: 0.75rem;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-right: 8px;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.btn-small:hover {
+    background: var(--primary-700);
+    transform: translateY(-1px);
+}
+
+.editor-info {
+    color: var(--gray-600);
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.syntax-error {
+    color: var(--danger-600) !important;
+}
+
+.syntax-valid {
+    color: var(--success-600) !important;
+}
+
+/* RESET DAILOGBOX
+
+/* Reset Confirmation Modal Styles */
+.reset-modal {
+    max-width: 500px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.reset-modal-header {
+    background: linear-gradient(135deg, var(--warning-500) 0%, var(--warning-600) 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+}
+
+.reset-modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+    pointer-events: none;
+}
+
+.warning-icon {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    animation: warningPulse 2s ease-in-out infinite;
+}
+
+@keyframes warningPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.reset-modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.reset-modal-body {
+    padding: 25px;
+    background: var(--white);
+}
+
+.reset-warning-text {
+    font-size: 1rem;
+    color: var(--gray-700);
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+
+.loss-items {
+    background: var(--danger-50);
+    border: 1px solid var(--danger-200);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.loss-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    color: var(--danger-700);
+    font-weight: 500;
+    border-bottom: 1px solid var(--danger-100);
+}
+
+.loss-item:last-child {
+    border-bottom: none;
+}
+
+.loss-item-icon {
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+
+.loss-item-text {
+    flex: 1;
+}
+
+.loss-item-count {
+    background: var(--danger-100);
+    color: var(--danger-800);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.reset-question {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    text-align: center;
+    margin: 0;
+}
+
+.reset-modal-actions {
+    background: var(--gray-50);
+    padding: 20px 25px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    border-top: 1px solid var(--gray-200);
+}
+
+.reset-modal-actions .btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 12px 20px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.reset-modal-actions .btn.danger {
+    background: var(--danger-500);
+    border-color: var(--danger-500);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.reset-modal-actions .btn.danger:hover {
+    background: var(--danger-600);
+    border-color: var(--danger-600);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.reset-modal-actions .btn:not(.danger) {
+    background: var(--white);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.reset-modal-actions .btn:not(.danger):hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+    transform: translateY(-1px);
+}
+
+/* Empty state for no losses */
+.no-losses {
+    text-align: center;
+    padding: 20px;
+    color: var(--gray-600);
+    font-style: italic;
+}
+
+.no-losses-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    opacity: 0.7;
+}
+
+
 
 /* ================================
    RESPONSIVE DESIGN
