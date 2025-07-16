@@ -10,10 +10,13 @@ let hasValidSelection = false;
 let fieldDefinitions = [];
 let currentFieldType = 'text';
 
+
 // GitHub Integration Variables
 let githubConfigured = false;
 let githubRepoInfo = null;
 let pendingDownloadData = null;
+
+window.monacoManager = null;
 
 // Simplified field types - no complex checkbox options
 const FIELD_TYPES = {
@@ -280,12 +283,326 @@ function setupPageControls() {
     const zoomIn = document.getElementById('zoom-in');
     const zoomOut = document.getElementById('zoom-out');
     const resetZoomBtn = document.getElementById('reset-zoom');
+     const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
 
     if (prevPage) prevPage.addEventListener('click', () => changePage(-1));
     if (nextPage) nextPage.addEventListener('click', () => changePage(1));
     if (zoomIn) zoomIn.addEventListener('click', () => changeZoom(1.25));
     if (zoomOut) zoomOut.addEventListener('click', () => changeZoom(0.8));
     if (resetZoomBtn) resetZoomBtn.addEventListener('click', () => resetZoom());
+     if (addAnotherPdfBtn) {
+        addAnotherPdfBtn.addEventListener('click', confirmAndResetForNewPdf);
+    }
+}
+
+function confirmAndResetForNewPdf() {
+    showResetConfirmationModal();
+}
+
+function showResetConfirmationModal() {
+    const modal = document.getElementById('reset-confirmation-modal');
+    const lossItemsList = document.getElementById('loss-items-list');
+
+    // Calculate what will be lost
+    const hasFields = fieldDefinitions.length > 0;
+    const hasPdf = !!currentPdf;
+    const hasMonacoContent = checkMonacoContentSafe();
+
+    let lossItems = [];
+
+    if (hasFields) {
+        lossItems.push({
+            icon: '🎯',
+            text: 'Configured PDF fields',
+            count: fieldDefinitions.length
+        });
+    }
+
+    if (hasPdf) {
+        lossItems.push({
+            icon: '📄',
+            text: 'Current PDF document',
+            count: `${totalPages} pages`
+        });
+    }
+
+    if (hasMonacoContent) {
+        lossItems.push({
+            icon: '🐍',
+            text: 'Python script changes',
+            count: 'Modified'
+        });
+    }
+
+    // Populate loss items
+    if (lossItems.length === 0) {
+        lossItemsList.innerHTML = `
+            <div class="no-losses">
+                <div class="no-losses-icon">✨</div>
+                <div>No work will be lost - you can safely start fresh!</div>
+            </div>
+        `;
+    } else {
+        lossItemsList.innerHTML = lossItems.map(item => `
+            <div class="loss-item">
+                <span class="loss-item-icon">${item.icon}</span>
+                <span class="loss-item-text">${item.text}</span>
+                <span class="loss-item-count">${item.count}</span>
+            </div>
+        `).join('');
+    }
+
+    // Show modal
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+
+    // Setup event listeners
+    setupResetModalEventListeners();
+}
+
+function setupResetModalEventListeners() {
+    const modal = document.getElementById('reset-confirmation-modal');
+    const confirmBtn = document.getElementById('confirm-reset-btn');
+    const cancelBtn = document.getElementById('cancel-reset-btn');
+
+    // Remove existing listeners to prevent duplicates
+    if (confirmBtn) {
+        confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+        document.getElementById('confirm-reset-btn').addEventListener('click', () => {
+            hideResetConfirmationModal();
+            resetApplicationForNewPdf();
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+        document.getElementById('cancel-reset-btn').addEventListener('click', hideResetConfirmationModal);
+    }
+
+    // Close on outside click
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideResetConfirmationModal();
+            }
+        });
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            hideResetConfirmationModal();
+        }
+    });
+}
+
+function hideResetConfirmationModal() {
+    const modal = document.getElementById('reset-confirmation-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function checkMonacoContentSafe() {
+    try {
+        if (!window.monacoManager || !window.monacoManager.isLoaded) {
+            return false;
+        }
+
+        const script1 = window.monacoManager.getValue('script1').trim();
+        const script2 = window.monacoManager.getValue('script2').trim();
+        const script3 = window.monacoManager.getValue('script3').trim();
+
+        // Check if any script has non-default content
+        const defaultTemplates = [
+            window.monacoManager.getTemplate('script1'),
+            window.monacoManager.getTemplate('script2'),
+            window.monacoManager.getTemplate('script3')
+        ];
+
+        return script1 !== defaultTemplates[0] ||
+               script2 !== defaultTemplates[1] ||
+               script3 !== defaultTemplates[2];
+    } catch (error) {
+        return false;
+    }
+}
+
+function checkMonacoContent() {
+    if (!monacoManager || !monacoManager.isLoaded) return false;
+
+    const script1 = monacoManager.getValue('script1').trim();
+    const script2 = monacoManager.getValue('script2').trim();
+    const script3 = monacoManager.getValue('script3').trim();
+
+    // Check if any script has non-template content
+    const defaultTemplates = [
+        monacoManager.getTemplate('script1'),
+        monacoManager.getTemplate('script2'),
+        monacoManager.getTemplate('script3')
+    ];
+
+    return script1 !== defaultTemplates[0] ||
+           script2 !== defaultTemplates[1] ||
+           script3 !== defaultTemplates[2];
+}
+
+function resetApplicationForNewPdf() {
+    try {
+        showLoading('Resetting for new PDF...');
+
+        // 1. Reset PDF-related variables
+        currentPdf = null;
+        currentPage = 1;
+        totalPages = 0;
+        currentScale = 1.0;
+        pdfDimensions = { width: 0, height: 0 };
+        currentImageDimensions = { width: 0, height: 0 };
+        hasValidSelection = false;
+        isSelecting = false;
+        selectionStart = null;
+
+        // 2. Clear field definitions
+        fieldDefinitions = [];
+
+        // 3. Reset UI to upload state
+        resetUIToUploadState();
+
+        // 4. Clear Monaco editors and reset to templates
+        resetMonacoEditors();
+
+        // 5. Clear any highlights or selections
+        clearAllHighlights();
+
+        // 6. Reset server-side session data
+        resetServerSession();
+
+        hideLoading();
+
+        // Show success message
+        showStatus('✅ Ready for new PDF! Upload a new file to begin.', 'success');
+
+        console.log('🔄 Application reset successfully for new PDF');
+
+    } catch (error) {
+        hideLoading();
+        showStatus(`❌ Error resetting application: ${error.message}`, 'error');
+        console.error('Reset error:', error);
+    }
+}
+
+function resetUIToUploadState() {
+    // Hide PDF controls and show upload area
+    const uploadArea = document.getElementById('upload-area');
+    const pdfControls = document.getElementById('pdf-controls');
+    const coordinateDebug = document.getElementById('coordinate-debug');
+    const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
+
+    if (uploadArea) uploadArea.classList.remove('hidden');
+    if (pdfControls) pdfControls.classList.add('hidden');
+    if (coordinateDebug) coordinateDebug.classList.add('hidden');
+    if (addAnotherPdfBtn) addAnotherPdfBtn.style.display = 'none';
+
+    // Reset file input
+    const fileInput = document.getElementById('pdf-file');
+    if (fileInput) fileInput.value = '';
+
+    // Clear extracted text
+    const extractedText = document.getElementById('extracted-text');
+    if (extractedText) {
+        extractedText.textContent = 'Text will appear here after selection...';
+        extractedText.classList.remove('has-text');
+    }
+
+    // Clear coordinate inputs
+    const coordInputs = ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2', 'coord-input', 'current-coords'];
+    coordInputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.value = '';
+    });
+
+    // Clear field inputs
+    const fieldNameInput = document.getElementById('field-name');
+    if (fieldNameInput) fieldNameInput.value = '';
+
+    // Reset target page dropdown
+    const targetPageSelect = document.getElementById('target-page');
+    if (targetPageSelect) {
+        targetPageSelect.innerHTML = '<option value="">Select page...</option>';
+        targetPageSelect.disabled = true;
+    }
+
+    // Update fields list
+    updateFieldsList();
+
+    // Disable buttons
+    const buttonsToDisable = [
+        'add-field-btn', 'preview-field-btn', 'clear-fields-btn',
+        'generate-config-btn', 'extract-btn', 'export-btn'
+    ];
+
+    buttonsToDisable.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = true;
+    });
+
+    // Reset step indicator
+    updateStepIndicator('upload');
+
+    // Clear status area
+    const statusArea = document.getElementById('status-area');
+    if (statusArea) statusArea.innerHTML = '';
+
+    // Clear debug info
+    updateDebugInfo('No coordinates selected');
+}
+
+function resetMonacoEditors() {
+    // ✅ Safe check - only reset if Monaco is available
+    if (window.monacoManager && window.monacoManager.isLoaded) {
+        try {
+            // Reset all Monaco editors to default templates
+            ['script1', 'script2', 'script3'].forEach(scriptId => {
+                const defaultTemplate = window.monacoManager.getTemplate(scriptId);
+                window.monacoManager.setValue(scriptId, defaultTemplate);
+                window.monacoManager.updateInfo(scriptId, '🔄 Reset to template', 'syntax-info');
+            });
+
+            console.log('🐍 Monaco editors reset to default templates');
+        } catch (error) {
+            console.warn('Error resetting Monaco editors:', error);
+        }
+    } else {
+        console.log('📝 Monaco editors not loaded - will use default templates when loaded');
+    }
+}
+
+function clearAllHighlights() {
+    // Clear highlights
+    const highlights = document.querySelectorAll('.highlight-box');
+    highlights.forEach(h => h.remove());
+
+    // Clear selection box
+    const selectionBox = document.getElementById('selection-box');
+    if (selectionBox) selectionBox.remove();
+}
+
+async function resetServerSession() {
+    try {
+
+        const response = await fetch('/reset_session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+            console.log('✅ Server session reset successfully');
+        }
+    } catch (error) {
+        console.warn('⚠️ Could not reset server session:', error);
+        // Don't show error to user as this is not critical
+    }
 }
 
 function setupCanvasEvents() {
@@ -643,6 +960,12 @@ async function uploadPdf(file) {
             updateStepIndicator('navigate');
 
             showStatus(`PDF loaded successfully! ${totalPages} pages (${result.page_width}×${result.page_height} pts)`, 'success');
+            const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
+             if (addAnotherPdfBtn) {
+            addAnotherPdfBtn.style.display = 'inline-flex';
+        }
+
+
 
             console.log('Server-side extracted data initialized:', result.extracted_data);
         } else {
@@ -1841,9 +2164,9 @@ async function executeGeneration() {
     const uploadToGithub = githubCheckbox && githubCheckbox.checked && githubConfigured;
 
     // Get manual scripts
-    const script1 = document.getElementById('script1')?.value || '';
-    const script2 = document.getElementById('script2')?.value || '';
-    const script3 = document.getElementById('script3')?.value || '';
+    const script1 = window.monacoManager ? window.monacoManager.getValue('script1').trim() : '';
+    const script2 = window.monacoManager ? window.monacoManager.getValue('script2').trim() : '';
+    const script3 = window.monacoManager ? window.monacoManager.getValue('script3').trim() : '';
 
     // Show processing state
     const scriptsSection = document.getElementById('scripts-input-section');
@@ -2240,6 +2563,299 @@ if (window.performance && window.performance.mark) {
         console.log(`🚀 OkayDocay Enhanced with Simplified Checkboxes loaded in ${loadTime.toFixed(2)}ms`);
     });
 }
+
+class SimpleMonacoEditor {
+    constructor() {
+        this.editors = {};
+        this.loadMonaco();
+    }
+
+    loadMonaco() {
+        // Add Monaco script if not already loaded
+        if (!window.monaco && !document.getElementById('monaco-loader')) {
+            const script = document.createElement('script');
+            script.id = 'monaco-loader';
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js';
+            script.onload = () => this.initMonaco();
+            document.head.appendChild(script);
+        } else if (window.monaco) {
+            this.initAllEditors();
+        }
+    }
+
+    initMonaco() {
+        require.config({
+            paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
+        });
+
+        require(['vs/editor/editor.main'], () => {
+            console.log('✅ Monaco Editor loaded');
+            this.initAllEditors();
+        });
+    }
+
+    initAllEditors() {
+        this.createEditor('script1', this.getTemplate('script1'));
+        this.createEditor('script2', this.getTemplate('script2'));
+        this.createEditor('script3', this.getTemplate('script3'));
+    }
+
+    createEditor(id, content) {
+        const container = document.getElementById(`${id}-editor`);
+        if (!container) {
+            console.error(`Container not found: ${id}-editor`);
+            return;
+        }
+
+        const editor = monaco.editor.create(container, {
+            value: content,
+            language: 'python',
+            theme: 'vs-dark',
+            automaticLayout: true,
+            minimap: { enabled: false },
+            fontSize: 13,
+            lineNumbers: 'on',
+            wordWrap: 'on',
+            scrollBeyondLastLine: false
+        });
+
+        this.editors[id] = editor;
+        this.updateInfo(id, 'Ready 🐍');
+
+        // Add syntax checking
+        editor.onDidChangeModelContent(() => {
+            this.debounce(() => this.checkSyntax(id), 1000);
+        });
+    }
+
+    getTemplate(id) {
+        const templates = {
+            'script1': `# Script 1 - PDF Data Processing
+import json
+
+def process_pdf_data(config):
+    """Process PDF configuration data"""
+    print(f"Processing: {config.get('pdf_name', 'Unknown')}")
+
+    # Your processing logic here
+    for page_num, page_data in config.get('pages', {}).items():
+        fields = page_data.get('fields', [])
+        print(f"Page {page_num}: {len(fields)} fields")
+
+    return config
+
+# Example usage
+if __name__ == "__main__":
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    result = process_pdf_data(config)`,
+
+            'script2': `# Script 2 - Field Processing
+import json
+
+def extract_field_coordinates(config):
+    """Extract field coordinates from config"""
+    fields = []
+
+    for page_num, page_data in config.get('pages', {}).items():
+        for field in page_data.get('fields', []):
+            coords = field['coordinates'].split(',')
+            fields.append({
+                'name': field['name'],
+                'type': field['type'],
+                'page': int(page_num),
+                'x1': float(coords[0]),
+                'y1': float(coords[1]),
+                'x2': float(coords[2]),
+                'y2': float(coords[3])
+            })
+
+    return fields`,
+
+            'script3': `# Script 3 - Form Generation
+import json
+
+def generate_form_template(config):
+    """Generate form template from config"""
+    template = {
+        'form_name': config.get('pdf_name', 'form'),
+        'fields': {}
+    }
+
+    for page_num, page_data in config.get('pages', {}).items():
+        for field in page_data.get('fields', []):
+            template['fields'][field['name']] = {
+                'type': field['type'],
+                'page': int(page_num),
+                'coordinates': field['coordinates'],
+                'value': ''
+            }
+
+    return template`
+        };
+        return templates[id] || '# Your Python script here\nimport json\n';
+    }
+
+    checkSyntax(id) {
+        const editor = this.editors[id];
+        if (!editor) return;
+
+        const code = editor.getValue();
+        const lines = code.split('\n');
+        let errors = 0;
+
+        // Simple syntax check
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+                // Check for missing colons
+                if (/^\s*(if|for|while|def|class|try|except|with|elif|else)\s+.*[^:]\s*$/.test(line)) {
+                    errors++;
+                }
+            }
+        });
+
+        if (errors === 0) {
+            this.updateInfo(id, '✅ Syntax OK', 'syntax-valid');
+        } else {
+            this.updateInfo(id, `❌ ${errors} errors`, 'syntax-error');
+        }
+    }
+
+    formatCode(id) {
+        const editor = this.editors[id];
+        if (editor) {
+            editor.getAction('editor.action.formatDocument').run();
+            this.updateInfo(id, '🔧 Formatted');
+        }
+    }
+
+    getValue(id) {
+        const editor = this.editors[id];
+        return editor ? editor.getValue() : '';
+    }
+
+    updateInfo(id, message, className = '') {
+        const info = document.getElementById(`${id}-info`);
+        if (info) {
+            info.textContent = message;
+            info.className = `editor-info ${className}`;
+        }
+    }
+
+    debounce(func, wait) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(func, wait);
+    }
+}
+
+// Global editor manager
+let pythonEditor = null;
+
+// Global functions for buttons
+function formatCode(id) {
+    if (pythonEditor) pythonEditor.formatCode(id);
+}
+
+function checkSyntax(id) {
+    if (pythonEditor) pythonEditor.checkSyntax(id);
+}
+
+// Initialize when modal opens
+const originalShowModal = showConfigGenerationModal;
+showConfigGenerationModal = function() {
+    originalShowModal();
+
+    // Initialize Monaco editor
+    if (!pythonEditor) {
+        pythonEditor = new SimpleMonacoEditor();
+    }
+};
+
+const originalExecuteGeneration = executeGeneration;
+executeGeneration = async function() {
+    const githubCheckbox = document.getElementById('upload-to-github');
+    const uploadToGithub = githubCheckbox && githubCheckbox.checked && githubConfigured;
+
+    // Get scripts from Monaco editors
+    const script1 = pythonEditor ? pythonEditor.getValue('script1') : '';
+    const script2 = pythonEditor ? pythonEditor.getValue('script2') : '';
+    const script3 = pythonEditor ? pythonEditor.getValue('script3') : '';
+
+    // Continue with existing logic...
+    const scriptsSection = document.getElementById('scripts-input-section');
+    const processing = document.getElementById('generation-processing');
+
+    if (scriptsSection) scriptsSection.classList.add('hidden');
+    if (processing) processing.classList.remove('hidden');
+
+    const processingStatus = document.getElementById('processing-status');
+    if (processingStatus) {
+        processingStatus.textContent = uploadToGithub ?
+            'Generating config and uploading to GitHub...' :
+            'Generating configuration package...';
+    }
+
+    try {
+        const requestData = {
+            script1: script1,
+            script2: script2,
+            script3: script3,
+            upload_to_github: uploadToGithub
+        };
+
+        const response = await fetch('/generate_config_json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        });
+
+        if (response.ok) {
+            const contentType = response.headers.get('content-type');
+
+            if (contentType && contentType.includes('application/json')) {
+                const result = await response.json();
+                if (result.uploaded_to_github) {
+                    showGitHubUploadSuccess(result);
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+            } else {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                const disposition = response.headers.get('Content-Disposition');
+                const filename = disposition ?
+                    disposition.split('filename=')[1]?.replace(/"/g, '') :
+                    `config_package_${Date.now()}.zip`;
+
+                a.download = filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+                pendingDownloadData = {
+                    blob: blob,
+                    filename: filename,
+                    script1: script1,
+                    script2: script2,
+                    script3: script3
+                };
+
+                showDownloadSuccess();
+            }
+        } else {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || 'Generation failed');
+        }
+
+    } catch (error) {
+        if (processing) processing.classList.add('hidden');
+        showStatus(`Generation failed: ${error.message}`, 'error');
+        if (scriptsSection) scriptsSection.classList.remove('hidden');
+    }
+};
 
 // ================================
 // CONSOLE LOGGING AND DEBUG

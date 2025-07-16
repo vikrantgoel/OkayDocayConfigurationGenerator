@@ -60,6 +60,10 @@
                         <button class="btn" id="reset-zoom">Reset</button>
                     </div>
 
+                       <button class="btn warning" id="add-another-pdf-btn" title="Upload a new PDF (will reset current work)">
+         Add Another PDF
+    </button>
+
                     <div class="canvas-container" id="canvas-container">
                         <img id="pdf-canvas" alt="PDF Page" style="display: block; max-width: none; cursor: crosshair;">
                     </div>
@@ -217,40 +221,49 @@
 
                     <!-- Scripts Grid Container -->
                     <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-                        <!-- Script 1 -->
-                        <div class="script-editor">
-                            <label for="script1">🐍 Script 1 (script1.py):</label>
-                            <textarea id="script1" placeholder="# Your first Python script goes here
-# Example for simplified checkboxes:
-# import json
- "></textarea>
-                            <div class="script-info">Optional - Will be saved as script1.py</div>
-                        </div>
+    <!-- Script 1 -->
+    <div class="script-editor">
+        <label>🐍 Script 1 (script1.py):</label>
+        <div class="editor-wrapper">
+            <div id="script1-editor" class="monaco-editor-container"></div>
+            <div class="editor-toolbar">
+                <button onclick="formatCode('script1')" class="btn-small">🔧 Format</button>
+                <button onclick="checkSyntax('script1')" class="btn-small">✅ Check</button>
+                <span class="editor-info" id="script1-info">Loading editor...</span>
+            </div>
+        </div>
+        <div class="script-info">Optional - Will be saved as script1.py</div>
+    </div>
 
-                        <!-- Script 2 -->
-                        <div class="script-editor">
-                            <label for="script2">🐍 Script 2 (script2.py):</label>
-                            <textarea id="script2" placeholder="# Your second Python script goes here
-# Example for field processing:
-# import json
-#
-# def extract_field_coordinates(config):
- "></textarea>
-                            <div class="script-info">Optional - Will be saved as script2.py</div>
-                        </div>
+    <!-- Script 2 -->
+    <div class="script-editor">
+        <label>🐍 Script 2 (script2.py):</label>
+        <div class="editor-wrapper">
+            <div id="script2-editor" class="monaco-editor-container"></div>
+            <div class="editor-toolbar">
+                <button onclick="formatCode('script2')" class="btn-small">🔧 Format</button>
+                <button onclick="checkSyntax('script2')" class="btn-small">✅ Check</button>
+                <span class="editor-info" id="script2-info">Loading editor...</span>
+            </div>
+        </div>
+        <div class="script-info">Optional - Will be saved as script2.py</div>
+    </div>
 
-                        <!-- Script 3 -->
-                        <div class="script-editor">
-                            <label for="script3">🐍 Script 3 (script3.py):</label>
-                            <textarea id="script3" placeholder="# Your third Python script goes here
-# Example for form generation:
-# import json
-#
-# def generate_form_template(config):
- "></textarea>
-                            <div class="script-info">Optional - Will be saved as script3.py</div>
-                        </div>
-                    </div>
+    <!-- Script 3 -->
+    <div class="script-editor">
+        <label>🐍 Script 3 (script3.py):</label>
+        <div class="editor-wrapper">
+            <div id="script3-editor" class="monaco-editor-container"></div>
+            <div class="editor-toolbar">
+                <button onclick="formatCode('script3')" class="btn-small">🔧 Format</button>
+                <button onclick="checkSyntax('script3')" class="btn-small">✅ Check</button>
+                <span class="editor-info" id="script3-info">Loading editor...</span>
+            </div>
+        </div>
+        <div class="script-info">Optional - Will be saved as script3.py</div>
+    </div>
+</div>
+
                 </div>
 
                 <!-- GitHub Integration Option -->
@@ -314,6 +327,34 @@
             </div>
         </div>
     </div>
+
+    <div id="reset-confirmation-modal" class="modal hidden">
+    <div class="modal-content reset-modal">
+        <div class="reset-modal-header">
+            <div class="warning-icon">⚠️</div>
+            <h3>Upload New PDF?</h3>
+        </div>
+
+        <div class="reset-modal-body">
+            <p class="reset-warning-text">This will reset everything and you'll lose:</p>
+
+            <div class="loss-items" id="loss-items-list">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+
+            <p class="reset-question">Do you want to continue?</p>
+        </div>
+
+        <div class="reset-modal-actions">
+            <button class="btn danger" id="confirm-reset-btn">
+                🔄 Yes, Reset Everything
+            </button>
+            <button class="btn" id="cancel-reset-btn">
+                ❌ Cancel
+            </button>
+        </div>
+    </div>
+</div>
 
     <!-- Debug script for testing -->
     <script>
