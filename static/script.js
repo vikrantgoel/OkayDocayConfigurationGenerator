@@ -31,12 +31,404 @@ let extractedText, debugInfo, coordinateDebug, zoomInfo, canvasContainer;
 let loadingOverlay, loadingText;
 let stepUpload, stepNavigate, stepSelect, stepExtract;
 
+// Add this at the TOP of script.js file, before any other code
+
+class SessionStateManager {
+    constructor() {
+        this.saveTimer = null;
+        this.saveDelay = 2000; // Auto-save after 2 seconds of inactivity
+        this.isLoaded = false;
+    }
+
+    // Save current state to server
+    async saveState() {
+        try {
+            const state = this.getCurrentState();
+
+            const response = await fetch('/save_session_state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                console.log('✅ Session state saved:', result.timestamp);
+                return true;
+            } else {
+                console.error('❌ Failed to save session state:', result.error);
+                return false;
+            }
+
+        } catch (error) {
+            console.error('❌ Error saving session state:', error);
+            return false;
+        }
+    }
+
+    // Load state from server
+    async loadState() {
+        try {
+            const response = await fetch('/load_session_state');
+            const result = await response.json();
+
+            if (result.success && result.state) {
+                await this.restoreState(result.state);
+                this.isLoaded = true;
+
+                if (result.hasData) {
+                    console.log(`Session restored - ${result.state.fieldDefinitions?.length || 0} fields`);
+                }
+
+                return true;
+            }
+
+        } catch (error) {
+            console.error('❌ Error loading session state:', error);
+        }
+
+        return false;
+    }
+
+    // Get current application state
+    getCurrentState() {
+    // Get current coordinates from input fields
+    const currentCoordsInput = document.getElementById('current-coords');
+    const currentCoords = currentCoordsInput ? currentCoordsInput.value : '';
+
+    const x1 = document.getElementById('pdf_x1')?.value || '';
+    const y1 = document.getElementById('pdf_y1')?.value || '';
+    const x2 = document.getElementById('pdf_x2')?.value || '';
+    const y2 = document.getElementById('pdf_y2')?.value || '';
+
+    // Only save coordinates if they're valid (not empty, not all zeros)
+    const hasValidCoords = currentCoords &&
+                          currentCoords !== '' &&
+                          currentCoords !== '0,0,0,0' &&
+                          currentCoords.split(',').some(c => parseFloat(c.trim()) !== 0);
+
+    return {
+        currentPage: currentPage,
+        currentScale: currentScale,
+        fieldDefinitions: fieldDefinitions,
+        currentPdf: currentPdf,
+        totalPages: totalPages,
+
+        // ADD: PDF dimensions and image dimensions
+        pdfDimensions: pdfDimensions,
+        currentImageDimensions: currentImageDimensions,
+
+        monacoScripts: this.getMonacoScripts(),
+        currentSelection: {
+            coordinates: hasValidCoords ? currentCoords : '',
+            x1: hasValidCoords ? x1 : '',
+            y1: hasValidCoords ? y1 : '',
+            x2: hasValidCoords ? x2 : '',
+            y2: hasValidCoords ? y2 : '',
+            hasValidSelection: hasValidSelection && hasValidCoords,
+            page: currentPage
+        },
+        timestamp: Date.now()
+    };
+}
+
+    // Restore state to application
+    // Restore state to application
+async restoreState(state) {
+    console.log('🔄 Restoring session state...', state);
+
+    // Restore basic variables
+    currentPage = state.currentPage || 1;
+    currentScale = state.currentScale || 1.0;
+    fieldDefinitions = state.fieldDefinitions || [];
+    currentPdf = state.currentPdf;
+    totalPages = state.totalPages || 0;
+
+    // ADD: Restore PDF dimensions
+    if (state.pdfDimensions) {
+        pdfDimensions = state.pdfDimensions;
+        console.log('📐 Restored PDF dimensions:', pdfDimensions);
+    }
+
+    if (state.currentImageDimensions) {
+        currentImageDimensions = state.currentImageDimensions;
+        console.log('🖼️ Restored image dimensions:', currentImageDimensions);
+    }
+
+    // Restore Monaco scripts when available
+    if (state.monacoScripts) {
+        this.restoreMonacoScripts(state.monacoScripts);
+    }
+
+    // Restore selection state
+    if (state.currentSelection) {
+        this.restoreSelection(state.currentSelection);
+    }
+
+    // Update UI elements
+    this.updateUIFromState(state);
+
+    console.log('✅ Session state restored');
+}
+
+    // Get Monaco editor content
+    // Get Monaco editor content
+getMonacoScripts() {
+    // Return empty object if Monaco isn't available
+    if (!window.monacoManager) {
+        console.log('📝 Monaco manager not available');
+        return {};
+    }
+
+    if (!window.monacoManager.isLoaded) {
+        console.log('📝 Monaco not loaded yet');
+        return {};
+    }
+
+    try {
+        const scripts = {
+            script1: window.monacoManager.getValue('script1') || '',
+            script2: window.monacoManager.getValue('script2') || '',
+            script3: window.monacoManager.getValue('script3') || ''
+        };
+
+        // Only save scripts that have been modified from default
+        const filteredScripts = {};
+        Object.entries(scripts).forEach(([id, content]) => {
+            const defaultTemplate = window.monacoManager.getTemplate(id);
+            if (content && content.trim() !== defaultTemplate.trim()) {
+                filteredScripts[id] = content;
+                console.log(`💾 Saving modified ${id} (${content.length} chars)`);
+            }
+        });
+
+        return filteredScripts;
+    } catch (error) {
+        console.warn('❌ Could not get Monaco scripts:', error);
+        return {};
+    }
+}
+
+    // Restore Monaco editor content
+    // Restore Monaco editor content
+restoreMonacoScripts(scripts) {
+    if (!scripts || typeof scripts !== 'object') {
+        console.log('📝 No Monaco scripts to restore');
+        return;
+    }
+
+    console.log('📝 Attempting to restore Monaco scripts:', scripts);
+
+    // If Monaco isn't loaded yet, try again later
+    if (!window.monacoManager?.isLoaded) {
+        console.log('⏳ Monaco not loaded yet, retrying in 1 second...');
+        setTimeout(() => this.restoreMonacoScripts(scripts), 1000);
+        return;
+    }
+
+    try {
+        let restoredCount = 0;
+        Object.entries(scripts).forEach(([id, content]) => {
+            if (content && content.trim()) {
+                const defaultTemplate = window.monacoManager.getTemplate(id);
+
+                // Only restore if content is different from default template
+                if (content.trim() !== defaultTemplate.trim()) {
+                    window.monacoManager.setValue(id, content);
+                    restoredCount++;
+                    console.log(`✅ Restored ${id} content (${content.length} chars)`);
+                } else {
+                    console.log(`📝 ${id} has default content, not restoring`);
+                }
+            }
+        });
+
+        if (restoredCount > 0) {
+            console.log(`✅ Monaco scripts restored: ${restoredCount} editors`);
+        } else {
+            console.log('📝 No custom Monaco content to restore');
+        }
+    } catch (error) {
+        console.warn('❌ Could not restore Monaco scripts:', error);
+    }
+}
+
+    // Restore selection
+    // Restore selection
+restoreSelection(selection) {
+    if (!selection) return;
+
+    console.log('🎯 Attempting to restore selection:', selection);
+
+    // Check if we have valid coordinates to restore
+    const coords = selection.coordinates;
+    const hasValidCoords = coords &&
+                          coords !== '' &&
+                          coords !== '0,0,0,0' &&
+                          coords.split(',').length === 4;
+
+    if (!hasValidCoords) {
+        console.log('📝 No valid coordinates to restore');
+        return;
+    }
+
+    // Parse and validate individual coordinates
+    const coordValues = coords.split(',').map(c => parseFloat(c.trim()));
+    const allCoordsValid = coordValues.length === 4 &&
+                          coordValues.every(c => !isNaN(c)) &&
+                          coordValues.some(c => c !== 0); // At least one non-zero value
+
+    if (!allCoordsValid) {
+        console.log('📝 Invalid coordinate values:', coordValues);
+        return;
+    }
+
+    console.log('✅ Restoring valid coordinates:', coordValues);
+
+    // Restore coordinate input fields
+    const currentCoordsInput = document.getElementById('current-coords');
+    const coordInput = document.getElementById('coord-input');
+    const x1Input = document.getElementById('pdf_x1');
+    const y1Input = document.getElementById('pdf_y1');
+    const x2Input = document.getElementById('pdf_x2');
+    const y2Input = document.getElementById('pdf_y2');
+
+    if (currentCoordsInput) currentCoordsInput.value = coords;
+    if (coordInput) coordInput.value = coords;
+    if (x1Input) x1Input.value = selection.x1;
+    if (y1Input) y1Input.value = selection.y1;
+    if (x2Input) x2Input.value = selection.x2;
+    if (y2Input) y2Input.value = selection.y2;
+
+    // Restore selection state variables
+    hasValidSelection = true; // Set to true since we have valid coords
+
+    // Enable extraction controls
+    enableExtractionControls(true);
+
+    // Show highlight and extract text after page loads
+    setTimeout(() => {
+        try {
+            this.restoreHighlight(coordValues);
+            // Extract text if we're on the same page
+            if (selection.page === currentPage) {
+                extractTextFromSelection(coordValues[0], coordValues[1], coordValues[2], coordValues[3]);
+            }
+        } catch (error) {
+            console.error('Error restoring highlight:', error);
+        }
+    }, 800); // Increased delay to ensure page is fully loaded
+
+    console.log('✅ Selection restored successfully');
+}
+
+    // Restore visual highlight
+    restoreHighlight(coords) {
+        if (!pdfCanvas || coords.length !== 4) return;
+
+        const [x1, y1, x2, y2] = coords;
+
+        // Convert PDF coordinates to image coordinates
+        const conversionFactor = getCoordinateConversionFactor();
+        const imageCoords = [
+            x1 / conversionFactor.x,
+            y1 / conversionFactor.y,
+            x2 / conversionFactor.x,
+            y2 / conversionFactor.y
+        ];
+
+        // Show highlight
+        showHighlight(imageCoords[0], imageCoords[1], imageCoords[2], imageCoords[3], '#10b981');
+
+        console.log('✅ Selection highlight restored');
+    }
+
+    // Update UI elements from restored state
+    updateUIFromState(state) {
+        // Update fields list
+        updateFieldsList();
+        updateFieldsReference();
+
+        // Update page info if PDF is loaded
+        if (currentPdf && totalPages > 0) {
+            updatePageInfo();
+            updatePageControls();
+            updateZoomInfo();
+
+            // Update page dropdown
+            const targetPageSelect = document.getElementById('target-page');
+            if (targetPageSelect) {
+                populatePageDropdown();
+                targetPageSelect.value = currentPage;
+            }
+        }
+
+        // Enable/disable buttons based on field count
+        if (fieldDefinitions.length > 0) {
+            const generateBtn = document.getElementById('generate-config-btn');
+            const clearBtn = document.getElementById('clear-fields-btn');
+            if (generateBtn) generateBtn.disabled = false;
+            if (clearBtn) clearBtn.disabled = false;
+        }
+
+        // Update step indicator
+        if (currentPdf) {
+            if (fieldDefinitions.length > 0) {
+                updateStepIndicator('extract');
+            } else {
+                updateStepIndicator('select');
+            }
+        }
+    }
+
+    // Schedule auto-save (debounced)
+    scheduleAutoSave() {
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+        }
+
+        this.saveTimer = setTimeout(() => {
+            this.saveState();
+        }, this.saveDelay);
+    }
+
+    // Clear session state
+    async clearState() {
+        try {
+            const response = await fetch('/clear_session_state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                console.log('✅ Session state cleared');
+                return true;
+            }
+
+        } catch (error) {
+            console.error('❌ Error clearing session state:', error);
+        }
+
+        return false;
+    }
+}
+
+
+const sessionManager = new SessionStateManager();
+console.log('✅ SessionStateManager created:', typeof sessionManager.loadState);
+
+
+
+
 // ================================
 // INITIALIZATION WITH GITHUB CHECK
 // ================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 OkayDocay Enhanced with Simplified Checkboxes - Initializing...');
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 OkayDocay Enhanced with Session Persistence - Initializing...');
 
     // Initialize DOM references
     initializeDOMReferences();
@@ -50,10 +442,79 @@ document.addEventListener('DOMContentLoaded', function() {
     setupSimplifiedFieldTypeControls();
     setupModalEventListeners();
 
+    // IMPORTANT: Load previous session state before other initialization
+    try {
+        console.log('🔄 Loading previous session state...');
+        const stateLoaded = await sessionManager.loadState();
+
+        if (stateLoaded) {
+            console.log('✅ Session state loaded successfully');
+
+            // If we have a PDF loaded from previous session, restore the UI
+            if (currentPdf && totalPages > 0) {
+                console.log(`📄 Restoring PDF: ${currentPdf} (${totalPages} pages)`);
+
+                // Show PDF controls instead of upload area
+                const uploadArea = document.getElementById('upload-area');
+                const pdfControls = document.getElementById('pdf-controls');
+                const coordinateDebug = document.getElementById('coordinate-debug');
+
+                if (uploadArea) uploadArea.classList.add('hidden');
+                if (pdfControls) pdfControls.classList.remove('hidden');
+                if (coordinateDebug) coordinateDebug.classList.remove('hidden');
+
+                // IMPORTANT: Load the SAVED current page, not page 1
+                console.log(`📖 Loading saved page: ${currentPage}`);
+                await loadPage(currentPage); // Use currentPage from restored state
+
+                // Enable controls
+                enableControls(true);
+
+                // Show the "Add Another PDF" button
+                const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
+                if (addAnotherPdfBtn) {
+                    addAnotherPdfBtn.style.display = 'inline-flex';
+                }
+
+                // Update step indicator based on current state
+                if (fieldDefinitions.length > 0) {
+                    updateStepIndicator('extract');
+                } else {
+                    updateStepIndicator('select');
+                }
+
+                console.log(`📊 Restored ${fieldDefinitions.length} field definitions`);
+            } else {
+                console.log('📝 No previous PDF session found - showing upload area');
+                updateStepIndicator('upload');
+            }
+        } else {
+            console.log('📝 No previous session state found - starting fresh');
+            updateStepIndicator('upload');
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading session state:', error);
+        showStatus('Could not restore previous session', 'warning');
+        updateStepIndicator('upload');
+    }
+
     // Check GitHub configuration
     checkGitHubConfiguration();
 
-    console.log('✅ OkayDocay Enhanced with Simplified Checkboxes - Ready!');
+    // Mark session manager as ready
+    sessionManager.isLoaded = true;
+
+    console.log('✅ OkayDocay Enhanced - Ready with Session Persistence!');
+
+    // Show initial status message
+    if (currentPdf && fieldDefinitions.length > 0) {
+        showStatus(`Session restored - ${fieldDefinitions.length} fields configured on page ${currentPage}`, 'success');
+    } else if (currentPdf) {
+        showStatus(`PDF session restored - page ${currentPage} ready for field configuration`, 'info');
+    } else {
+        showStatus('Ready! Upload a PDF to begin field configuration.', 'info');
+    }
 });
 
 function initializeDOMReferences() {
@@ -939,7 +1400,12 @@ async function uploadPdf(file) {
         if (result.success) {
             currentPdf = result.filename;
             totalPages = result.page_count;
-            currentPage = 1;
+
+            // ONLY set currentPage = 1 for NEW uploads, not restored sessions
+            if (!sessionManager.isLoaded || currentPage > result.page_count) {
+                currentPage = 1; // Only reset if this is a new upload or invalid page
+            }
+
             pdfDimensions.width = result.page_width;
             pdfDimensions.height = result.page_height;
 
@@ -955,17 +1421,17 @@ async function uploadPdf(file) {
             currentScale = 1.0;
             hideLoading();
 
-            await loadPage(1);
+            // Load the current page (which might not be 1 if restored from session)
+            await loadPage(currentPage);
             enableControls(true);
             updateStepIndicator('navigate');
 
             showStatus(`PDF loaded successfully! ${totalPages} pages (${result.page_width}×${result.page_height} pts)`, 'success');
+
             const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
-             if (addAnotherPdfBtn) {
-            addAnotherPdfBtn.style.display = 'inline-flex';
-        }
-
-
+            if (addAnotherPdfBtn) {
+                addAnotherPdfBtn.style.display = 'inline-flex';
+            }
 
             console.log('Server-side extracted data initialized:', result.extracted_data);
         } else {
@@ -997,14 +1463,21 @@ async function loadPage(pageNum) {
                 pdfCanvas.src = result.image;
             }
 
+            // IMPORTANT: Update current image dimensions
             currentImageDimensions.width = result.display_width;
             currentImageDimensions.height = result.display_height;
+
+            // IMPORTANT: If PDF dimensions aren't set, get them from the first page load
+            if (!pdfDimensions.width || !pdfDimensions.height) {
+                // These should come from the page response or be calculated
+                // You might need to add this to your server response
+                console.warn('PDF dimensions missing, may cause coordinate issues');
+            }
 
             updateZoomInfo();
             updatePageInfo();
             updatePageControls();
 
-            // Update target page dropdown
             const targetPageDropdown = document.getElementById('target-page');
             if (targetPageDropdown && targetPageDropdown.value !== pageNum.toString()) {
                 targetPageDropdown.value = pageNum.toString();
@@ -1016,6 +1489,24 @@ async function loadPage(pageNum) {
             showStatus(`Page ${pageNum} loaded at ${result.resolution} DPI${qualityInfo} - ${result.word_count} words`, 'success');
 
             updateDebugInfo(`Loaded: PDF(${pdfDimensions.width}×${pdfDimensions.height}) -> Image(${currentImageDimensions.width}×${currentImageDimensions.height})`);
+
+            // Restore selection after page loads
+            setTimeout(() => {
+                const currentCoordsInput = document.getElementById('current-coords');
+                if (currentCoordsInput && currentCoordsInput.value && currentCoordsInput.value !== '0,0,0,0') {
+                    const coords = currentCoordsInput.value.split(',').map(c => parseFloat(c.trim()));
+                    if (coords.length === 4 && coords.every(c => !isNaN(c) && c !== 0)) {
+                        // Only restore highlight if we have valid PDF dimensions
+                        if (pdfDimensions.width > 0 && pdfDimensions.height > 0) {
+                            sessionManager.restoreHighlight(coords);
+                            extractTextFromSelection(coords[0], coords[1], coords[2], coords[3]);
+                        } else {
+                            console.warn('Cannot restore selection: PDF dimensions not available');
+                        }
+                    }
+                }
+            }, 100);
+
         } else {
             showStatus(`Failed to load page: ${result.error}`, 'error');
         }
@@ -1036,8 +1527,19 @@ function onImageLoad() {
 function changePage(delta) {
     const newPage = currentPage + delta;
     if (newPage >= 1 && newPage <= totalPages) {
+        const oldPage = currentPage;
         currentPage = newPage;
+
+        console.log(`📖 Navigating from page ${oldPage} to page ${currentPage}`);
+
         loadPage(currentPage);
+
+        // Save page change immediately
+        if (sessionManager && sessionManager.isLoaded) {
+            sessionManager.saveState().then(() => {
+                console.log(`💾 Page change saved: ${oldPage} → ${currentPage}`);
+            });
+        }
     }
 }
 
@@ -1045,6 +1547,8 @@ function changeZoom(factor) {
     currentScale *= factor;
     currentScale = Math.max(0.25, Math.min(4.0, currentScale));
     loadPage(currentPage);
+
+    sessionManager.scheduleAutoSave();
 }
 
 function resetZoom() {
@@ -1101,6 +1605,7 @@ function updateSelection(event) {
     updateDebugInfo(`Selecting: PDF(${pdfCoords.x1.toFixed(1)}, ${pdfCoords.y1.toFixed(1)}, ${pdfCoords.x2.toFixed(1)}, ${pdfCoords.y2.toFixed(1)})`);
 }
 
+
 function endSelection(event) {
     if (!isSelecting || !selectionStart || !pdfCanvas) return;
 
@@ -1154,17 +1659,14 @@ function endSelection(event) {
 }
 
 function updateCoordinateFields(x1, y1, x2, y2) {
-    // Use higher precision - round to 2 decimal places instead of whole numbers
-    const precision = 100; // For 2 decimal places
+    // Use higher precision - round to 2 decimal places
+    const precision = 100;
 
     const coordinateFields = {
-        // Individual coordinate fields with 2 decimal places
         'pdf_x1': Math.round(x1 * precision) / precision,
         'pdf_y1': Math.round(y1 * precision) / precision,
         'pdf_x2': Math.round(x2 * precision) / precision,
         'pdf_y2': Math.round(y2 * precision) / precision,
-
-        // Combined coordinate fields with 2 decimal places (not rounded to whole numbers)
         'coord-input': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`,
         'current-coords': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`
     };
@@ -1178,6 +1680,12 @@ function updateCoordinateFields(x1, y1, x2, y2) {
     enableExtractionControls(true);
     updateStepIndicator('select');
     validateField();
+
+    // FIXED: Auto-save with proper check
+    if (sessionManager && sessionManager.isLoaded) {
+        console.log('💾 Saving coordinates:', coordinateFields['current-coords']);
+        sessionManager.scheduleAutoSave(); // Use scheduleAutoSave instead of direct saveState
+    }
 }
 
 //   the validateAndUpdateCoordinates function to maintain precision
@@ -1198,6 +1706,9 @@ function validateAndUpdateCoordinates() {
 
     updateDebugInfo(`Manual PDF coords: (${coords.join(', ')})`);
     showArea();
+     if (sessionManager.isLoaded) {
+        sessionManager.scheduleAutoSave();
+    }
 }
 
 //   the updateCoordinatesFromInput function for better precision handling
@@ -1290,6 +1801,12 @@ function clearSelectionOnly() {
     hasValidSelection = false;
     updateDebugInfo('No coordinates selected');
     validateField();
+
+    // FIXED: Save the cleared state
+    if (sessionManager && sessionManager.isLoaded) {
+        console.log('💾 Saving cleared selection');
+        sessionManager.scheduleAutoSave();
+    }
 }
 
 function clearSelection() {
@@ -1723,9 +2240,18 @@ function handlePageSelection() {
     const selectedPage = parseInt(targetPageSelect.value);
 
     if (selectedPage && selectedPage !== currentPage) {
+        const oldPage = currentPage;
         showStatus(`Navigating to page ${selectedPage}...`, 'info');
         currentPage = selectedPage;
-        loadPage(currentPage);
+
+        loadPage(currentPage).then(() => {
+            // Save page change after loading
+            if (sessionManager && sessionManager.isLoaded) {
+                sessionManager.saveState().then(() => {
+                    console.log(`💾 Page selection saved: ${oldPage} → ${currentPage}`);
+                });
+            }
+        });
     }
 
     validateField();
@@ -1862,6 +2388,8 @@ function addFieldToDefinitions(field) {
     fieldDefinitions.push(field);
     updateFieldsList();
     updateFieldsReference();
+
+    sessionManager.scheduleAutoSave();
 
     // Add field to server-side extracted data
     addFieldToServer({
@@ -2431,6 +2959,8 @@ window.removeField = function(fieldName) {
     updateFieldsReference();
     showStatus(`Field "${fieldName}" removed`, 'info');
 
+     sessionManager.scheduleAutoSave();
+
     if (fieldDefinitions.length === 0) {
         const clearFieldsBtn = document.getElementById('clear-fields-btn');
         const generateConfigBtn = document.getElementById('generate-config-btn');
@@ -2522,7 +3052,53 @@ document.addEventListener('keydown', function(event) {
 // ================================
 // FINAL INITIALIZATION CHECK
 // ================================
+// Add these AFTER your DOMContentLoaded event
 
+// Save before page unload
+window.addEventListener('beforeunload', function(event) {
+    console.log('💾 Saving session state before page unload...');
+
+    if (sessionManager && sessionManager.isLoaded && (fieldDefinitions.length > 0 || currentPdf)) {
+        const state = sessionManager.getCurrentState();
+
+        try {
+            // Use sendBeacon for reliable save during page unload
+            const success = navigator.sendBeacon('/save_session_state', JSON.stringify(state));
+
+            if (success) {
+                console.log('✅ Session state saved via sendBeacon');
+            } else {
+                console.warn('⚠️ sendBeacon failed');
+            }
+        } catch (error) {
+            console.error('❌ Failed to save session state on unload:', error);
+        }
+    }
+});
+
+// Add periodic auto-save (every 30 seconds)
+setInterval(() => {
+    if (sessionManager && sessionManager.isLoaded && (fieldDefinitions.length > 0 || currentPdf)) {
+        sessionManager.saveState().then(success => {
+            if (success) {
+                console.log('🔄 Auto-save completed');
+            }
+        }).catch(error => {
+            console.warn('⚠️ Auto-save failed:', error);
+        });
+    }
+}, 30000); // 30 seconds
+
+// Save when tab becomes hidden
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden' && sessionManager && sessionManager.isLoaded) {
+        sessionManager.saveState().then(success => {
+            if (success) {
+                console.log('💾 Session saved on visibility change');
+            }
+        });
+    }
+});
 document.addEventListener('DOMContentLoaded', function() {
     // Verify all critical elements are present
     const criticalElements = [
@@ -2567,6 +3143,7 @@ if (window.performance && window.performance.mark) {
 class SimpleMonacoEditor {
     constructor() {
         this.editors = {};
+        this.isLoaded = false;
         this.loadMonaco();
     }
 
@@ -2598,6 +3175,11 @@ class SimpleMonacoEditor {
         this.createEditor('script1', this.getTemplate('script1'));
         this.createEditor('script2', this.getTemplate('script2'));
         this.createEditor('script3', this.getTemplate('script3'));
+
+        // Mark as loaded after all editors are created
+        setTimeout(() => {
+            this.markAsLoaded();
+        }, 500);
     }
 
     createEditor(id, content) {
@@ -2622,76 +3204,50 @@ class SimpleMonacoEditor {
         this.editors[id] = editor;
         this.updateInfo(id, 'Ready 🐍');
 
-        // Add syntax checking
+        // ADD: Auto-save when content changes
         editor.onDidChangeModelContent(() => {
-            this.debounce(() => this.checkSyntax(id), 1000);
+            this.debounce(() => {
+                this.checkSyntax(id);
+                // Trigger session auto-save when Monaco content changes
+                if (sessionManager && sessionManager.isLoaded) {
+                    console.log(`💾 Monaco ${id} content changed, triggering auto-save`);
+                    sessionManager.scheduleAutoSave();
+                }
+            }, 1000);
         });
     }
 
     getTemplate(id) {
         const templates = {
-            'script1': `# Script 1 - PDF Data Processing
-import json
+            'script1': `
+form_variables = [
+'BUYER1',]`,
 
-def process_pdf_data(config):
-    """Process PDF configuration data"""
-    print(f"Processing: {config.get('pdf_name', 'Unknown')}")
+            'script2': `
+expected_values = {
 
-    # Your processing logic here
-    for page_num, page_data in config.get('pages', {}).items():
-        fields = page_data.get('fields', [])
-        print(f"Page {page_num}: {len(fields)} fields")
+'BUYER1': BUYER1,
+}
+`,
 
-    return config
+            'script3': `
 
-# Example usage
-if __name__ == "__main__":
-    with open('config.json', 'r') as f:
-        config = json.load(f)
-    result = process_pdf_data(config)`,
+matches = []
+mismatches = []
 
-            'script2': `# Script 2 - Field Processing
-import json
+Buyer1 = expected_values['BUYER1']
 
-def extract_field_coordinates(config):
-    """Extract field coordinates from config"""
-    fields = []
+if buyer1 == af_BUYER1:
+    matches.append(create_result_entry('BUYER1', buyer1, BUYER1_info, True))
+else:
+    mismatches.append(create_result_entry('BUYER1', buyer1, BUYER1_info, False))
 
-    for page_num, page_data in config.get('pages', {}).items():
-        for field in page_data.get('fields', []):
-            coords = field['coordinates'].split(',')
-            fields.append({
-                'name': field['name'],
-                'type': field['type'],
-                'page': int(page_num),
-                'x1': float(coords[0]),
-                'y1': float(coords[1]),
-                'x2': float(coords[2]),
-                'y2': float(coords[3])
-            })
-
-    return fields`,
-
-            'script3': `# Script 3 - Form Generation
-import json
-
-def generate_form_template(config):
-    """Generate form template from config"""
-    template = {
-        'form_name': config.get('pdf_name', 'form'),
-        'fields': {}
-    }
-
-    for page_num, page_data in config.get('pages', {}).items():
-        for field in page_data.get('fields', []):
-            template['fields'][field['name']] = {
-                'type': field['type'],
-                'page': int(page_num),
-                'coordinates': field['coordinates'],
-                'value': ''
-            }
-
-    return template`
+validation_results = {
+'matches': matches,
+'mismatches': mismatches,
+'summary': calculate_summary(matches, mismatches)
+}
+`
         };
         return templates[id] || '# Your Python script here\nimport json\n';
     }
@@ -2735,6 +3291,19 @@ def generate_form_template(config):
         return editor ? editor.getValue() : '';
     }
 
+    setValue(id, content) {
+        const editor = this.editors[id];
+        if (editor && content) {
+            editor.setValue(content);
+            console.log(`📝 Monaco ${id} content set:`, content.substring(0, 50) + '...');
+        }
+    }
+
+    markAsLoaded() {
+        this.isLoaded = true;
+        console.log('✅ Monaco editors marked as loaded');
+    }
+
     updateInfo(id, message, className = '') {
         const info = document.getElementById(`${id}-info`);
         if (info) {
@@ -2749,6 +3318,8 @@ def generate_form_template(config):
     }
 }
 
+
+
 // Global editor manager
 let pythonEditor = null;
 
@@ -2762,13 +3333,26 @@ function checkSyntax(id) {
 }
 
 // Initialize when modal opens
+// Update the original modal opening
 const originalShowModal = showConfigGenerationModal;
 showConfigGenerationModal = function() {
     originalShowModal();
 
-    // Initialize Monaco editor
-    if (!pythonEditor) {
-        pythonEditor = new SimpleMonacoEditor();
+    // Initialize Monaco editor if not already done
+    if (!window.monacoManager) {
+        console.log('🔧 Initializing Monaco manager...');
+        window.monacoManager = new SimpleMonacoEditor();
+    } else if (!window.monacoManager.isLoaded) {
+        console.log('⏳ Monaco manager exists but not loaded yet...');
+        // Try to restore scripts after Monaco loads
+        setTimeout(() => {
+            if (sessionManager && sessionManager.getCurrentState().monacoScripts) {
+                console.log('🔄 Restoring scripts after Monaco loads...');
+                sessionManager.restoreMonacoScripts(sessionManager.getCurrentState().monacoScripts);
+            }
+        }, 1500);
+    } else {
+        console.log('✅ Monaco already loaded and ready');
     }
 };
 
@@ -2856,6 +3440,60 @@ executeGeneration = async function() {
         if (scriptsSection) scriptsSection.classList.remove('hidden');
     }
 };
+
+async function showSessionInfo() {
+    try {
+        const response = await fetch('/session_info');
+        const result = await response.json();
+
+        if (result.success) {
+            const info = result.info;
+            const message = `
+Session Info:
+- ID: ${info.session_id}
+- Created: ${new Date(info.created_at).toLocaleString()}
+- PDFs: ${info.pdfs_loaded}
+- Fields: ${info.fields_count}
+- Cache: ${info.cache_size} items
+- Last Saved: ${info.last_saved ? new Date(info.last_saved).toLocaleString() : 'Never'}
+            `;
+            alert(message);
+        }
+    } catch (error) {
+        console.error('Error getting session info:', error);
+    }
+}
+
+async function manualSaveSession() {
+    const success = await sessionManager.saveState();
+    showStatus(success ? 'Session saved manually' : 'Failed to save session', success ? 'success' : 'error');
+}
+
+async function clearSessionState() {
+    if (confirm('Clear all session data? This will remove all fields and reset the application.')) {
+        const success = await sessionManager.clearState();
+        if (success) {
+            window.location.reload();
+        }
+    }
+}
+
+window.showSessionInfo = showSessionInfo;
+window.manualSaveSession = manualSaveSession;
+window.clearSessionState = clearSessionState;
+
+
+function debugDimensions() {
+    console.log('=== DIMENSIONS DEBUG ===');
+    console.log('PDF Dimensions:', pdfDimensions);
+    console.log('Image Dimensions:', currentImageDimensions);
+    console.log('Conversion Factor:', getCoordinateConversionFactor());
+    console.log('Current PDF:', currentPdf);
+    console.log('Total Pages:', totalPages);
+}
+
+window.debugDimensions = debugDimensions;
+
 
 // ================================
 // CONSOLE LOGGING AND DEBUG

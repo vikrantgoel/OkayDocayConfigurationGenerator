@@ -13,6 +13,8 @@ import requests
 from datetime import datetime, timedelta
 import atexit
 
+from numpy.f2py.crackfortran import expectbegin
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
@@ -47,6 +49,58 @@ class UserSession:
 
         # Initialize server-side extracted data
         self.extracted_data = {}
+
+        self.ui_state = {
+            'currentPage': 1,
+            'currentScale': 1.0,
+            'fieldDefinitions': [],
+            'currentPdf': None,
+            'totalPages': 0,
+
+
+            'pdfDimensions': {'width': 0, 'height': 0},
+            'currentImageDimensions': {'width': 0, 'height': 0},
+
+            'monacoScripts': {'script1': '', 'script2': '', 'script3': ''},
+            'currentSelection': {
+                'coordinates': '',
+                'x1': '', 'y1': '', 'x2': '', 'y2': '',
+                'hasValidSelection': False,
+                'page': 1
+            },
+            'lastSaved': None
+        }
+
+    def update_ui_state(self,new_state):
+        '''UPDATE UI STATE WITH TIMESTAMP'''
+        self.ui_state.update(new_state)
+        self.ui_state['lastSaved'] = datetime.now().isoformat()
+
+    def get_ui_state(self):
+        """ Get the current UI state"""
+        return self.ui_state.copy()
+
+
+    def clear_ui_state(self):
+        self.ui_state = {
+            'currentPage': 1,
+            'currentScale': 1.0,
+            'fieldDefinitions': [],
+            'currentPdf': None,
+            'totalPages': 0,
+            'monacoScripts': {
+                'script1': {
+                    'script1': '',
+                    'script2': '',
+                    'script3': '',
+
+                },
+                'lastSaved': datetime.now().isoformat()
+
+            }
+        }
+
+
 
     def update_access_time(self):
         self.last_accessed = datetime.now()
@@ -180,6 +234,7 @@ def create_github_repo_if_not_exists():
         return {'success': False, 'error': f'Failed to check repository: {response.text}'}
 
 
+
 def upload_to_github(file_path, github_path, commit_message):
     """Upload a file to GitHub repository"""
     if not GITHUB_TOKEN:
@@ -232,7 +287,7 @@ def upload_zip_to_github(zip_path, pdf_name, generation_type):
     """Upload ZIP file to GitHub with organized folder structure"""
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     clean_pdf_name = pdf_name.replace('.pdf', '').replace(' ', '_')
-    github_path = f'configs/{clean_pdf_name}/{timestamp}_{generation_type}.zip'
+    github_path = f'configs/{clean_pdf_name}.zip'
 
     commit_message = f'Add {generation_type} configuration for {pdf_name} - {timestamp}'
 
@@ -262,16 +317,17 @@ def github_config():
         })
 
     elif request.method == 'POST':
-        data = request.get_json()
+        data = (request.get_json())
         return jsonify({
             'success': True,
             'message': 'GitHub configuration is managed via environment variables'
         })
 
 
+
 @app.route('/upload_pdf', methods=['POST'])
 def upload_pdf():
-    """Handle PDF file upload with user isolation"""
+    """Handle PDF file upload with user isolation and UI state reset"""
     try:
         if 'pdf_file' not in request.files:
             return jsonify({'success': False, 'error': 'No file uploaded'})
@@ -285,6 +341,18 @@ def upload_pdf():
 
         user_session = get_user_session()
 
+        # Clean up previous PDF data
+        for pdf_data in user_session.pdfs.values():
+            if 'pdf' in pdf_data:
+                pdf_data['pdf'].close()
+
+        # Clear previous session data
+        user_session.pdfs.clear()
+        user_session.image_cache.clear()
+        user_session.text_cache.clear()
+        user_session.page_fields.clear()
+
+        # Generate unique filename
         filename = f"{user_session.session_id}_{str(uuid.uuid4())}.pdf"
         file_path = f"/tmp/{filename}"
         file.save(file_path)
@@ -292,12 +360,14 @@ def upload_pdf():
 
         start_time = time.time()
 
+        # Process PDF
         pdf = pdfplumber.open(file_path)
         page_count = len(pdf.pages)
 
         first_page = pdf.pages[0]
         sample_words = first_page.extract_words()
 
+        # Store PDF data
         user_session.pdfs[filename] = {
             'pdf': pdf,
             'file_path': file_path,
@@ -310,13 +380,27 @@ def upload_pdf():
             }
         }
 
-        user_session.page_fields.clear()
-
+        # Reset extracted data for new PDF
         user_session.extracted_data = {
             'pdf_name': file.filename,
             'total_pages': page_count,
             'created_on': datetime.now().isoformat(),
             'pages': {}
+        }
+
+        # IMPORTANT: Reset UI state for new PDF
+        user_session.ui_state = {
+            'currentPage': 1,
+            'currentScale': 1.0,
+            'fieldDefinitions': [],           # Clear previous fields
+            'currentPdf': filename,           # Set new PDF filename
+            'totalPages': page_count,         # Set new page count
+            'monacoScripts': {               # Reset scripts to defaults
+                'script1': '',
+                'script2': '',
+                'script3': ''
+            },
+            'lastSaved': datetime.now().isoformat()
         }
 
         load_time = round((time.time() - start_time) * 1000, 2)
@@ -334,12 +418,12 @@ def upload_pdf():
                 'pdfs_loaded': len(user_session.pdfs),
                 'cache_items': len(user_session.image_cache)
             },
-            'extracted_data': user_session.extracted_data
+            'extracted_data': user_session.extracted_data,
+            'ui_state_reset': True  # Indicate that UI state was reset
         })
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 @app.route('/get_page/<int:page_num>')
 def get_page(page_num):
@@ -836,6 +920,88 @@ def reset_session():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/save_session_state', methods=['POST'])
+def save_session_state():
+    """Save UI state to server session for page refresh survival"""
+    try:
+        user_session = get_user_session()
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'})
+
+        # Update the user's UI state
+        user_session.update_ui_state(data)
+
+        return jsonify({
+            'success': True,
+            'message': 'Session state saved',
+            'timestamp': user_session.ui_state['lastSaved']
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/load_session_state', methods = ['GET'])
+def load_session_state():
+    try:
+        user_session = get_user_session()
+
+        return jsonify({
+            'success': True,
+            'state': user_session.get_ui_state(),
+            'hasData': bool(user_session.ui_state.get('fieldDefinitions'))
+        })
+
+    except Exception as e:
+        return jsonify({'success':False, 'error':str(e)})
+
+@app.route ('/clear_session_ state', methods = ['POST'])
+def clear_session_state():
+    ''''Clear UI '''
+
+    try:
+        user_session = get_user_session()
+        user_session.clear_ui_state()
+
+
+        return jsonify({
+            'success': True,
+            'message' : 'Session state cleared'
+        })
+
+    except Exception as e:
+          return jsonify({'success':False, 'error': str (e)})
+
+@app.route('/session_info', methods = ['GET'])
+def session_info():
+    try:
+        user_session = get_user_session()
+
+        return jsonify({
+            'success': True,
+            'info': {
+                'session_id': user_session.session_id[:8] + '...',  # Partial ID for privacy
+                'created_at': user_session.created_at.isoformat(),
+                'pdfs_loaded': len(user_session.pdfs),
+                'fields_count': len(user_session.ui_state.get('fieldDefinitions', [])),
+                'cache_size': len(user_session.image_cache),
+                'last_saved': user_session.ui_state.get('lastSaved')
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'success': False , 'error':str(e)})
+
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
