@@ -18,9 +18,9 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 
 # GitHub Configuration
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
-GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', 'your-username')
-GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'pdf-configs')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER')
+GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME')
 
 user_sessions = {}
 sessions_lock = threading.Lock()
