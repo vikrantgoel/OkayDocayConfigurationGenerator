@@ -10,7 +10,6 @@ let hasValidSelection = false;
 let fieldDefinitions = [];
 let currentFieldType = 'text';
 
-
 // GitHub Integration Variables
 let githubConfigured = false;
 let githubRepoInfo = null;
@@ -36,7 +35,7 @@ let stepUpload, stepNavigate, stepSelect, stepExtract;
 // ================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 OkayDocay Enhanced with Simplified Checkboxes - Initializing...');
+    console.log('🚀 OkayDocay Enhanced with Single Validation Script - Initializing...');
 
     // Initialize DOM references
     initializeDOMReferences();
@@ -53,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check GitHub configuration
     checkGitHubConfiguration();
 
-    console.log('✅ OkayDocay Enhanced with Simplified Checkboxes - Ready!');
+    console.log('✅ OkayDocay Enhanced with Single Validation Script - Ready!');
 });
 
 function initializeDOMReferences() {
@@ -283,14 +282,14 @@ function setupPageControls() {
     const zoomIn = document.getElementById('zoom-in');
     const zoomOut = document.getElementById('zoom-out');
     const resetZoomBtn = document.getElementById('reset-zoom');
-     const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
+    const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
 
     if (prevPage) prevPage.addEventListener('click', () => changePage(-1));
     if (nextPage) nextPage.addEventListener('click', () => changePage(1));
     if (zoomIn) zoomIn.addEventListener('click', () => changeZoom(1.25));
     if (zoomOut) zoomOut.addEventListener('click', () => changeZoom(0.8));
     if (resetZoomBtn) resetZoomBtn.addEventListener('click', () => resetZoom());
-     if (addAnotherPdfBtn) {
+    if (addAnotherPdfBtn) {
         addAnotherPdfBtn.addEventListener('click', confirmAndResetForNewPdf);
     }
 }
@@ -329,7 +328,7 @@ function showResetConfirmationModal() {
     if (hasMonacoContent) {
         lossItems.push({
             icon: '🐍',
-            text: 'Python script changes',
+            text: 'Validation script changes',
             count: 'Modified'
         });
     }
@@ -410,42 +409,14 @@ function checkMonacoContentSafe() {
             return false;
         }
 
-        const script1 = window.monacoManager.getValue('script1').trim();
-        const script2 = window.monacoManager.getValue('script2').trim();
-        const script3 = window.monacoManager.getValue('script3').trim();
+        const script = window.monacoManager.getValue().trim();
+        const defaultTemplate = window.monacoManager.getTemplate();
 
-        // Check if any script has non-default content
-        const defaultTemplates = [
-            window.monacoManager.getTemplate('script1'),
-            window.monacoManager.getTemplate('script2'),
-            window.monacoManager.getTemplate('script3')
-        ];
-
-        return script1 !== defaultTemplates[0] ||
-               script2 !== defaultTemplates[1] ||
-               script3 !== defaultTemplates[2];
+        // Check if script has non-default content
+        return script !== defaultTemplate;
     } catch (error) {
         return false;
     }
-}
-
-function checkMonacoContent() {
-    if (!monacoManager || !monacoManager.isLoaded) return false;
-
-    const script1 = monacoManager.getValue('script1').trim();
-    const script2 = monacoManager.getValue('script2').trim();
-    const script3 = monacoManager.getValue('script3').trim();
-
-    // Check if any script has non-template content
-    const defaultTemplates = [
-        monacoManager.getTemplate('script1'),
-        monacoManager.getTemplate('script2'),
-        monacoManager.getTemplate('script3')
-    ];
-
-    return script1 !== defaultTemplates[0] ||
-           script2 !== defaultTemplates[1] ||
-           script3 !== defaultTemplates[2];
 }
 
 function resetApplicationForNewPdf() {
@@ -562,19 +533,17 @@ function resetMonacoEditors() {
     // ✅ Safe check - only reset if Monaco is available
     if (window.monacoManager && window.monacoManager.isLoaded) {
         try {
-            // Reset all Monaco editors to default templates
-            ['script1', 'script2', 'script3'].forEach(scriptId => {
-                const defaultTemplate = window.monacoManager.getTemplate(scriptId);
-                window.monacoManager.setValue(scriptId, defaultTemplate);
-                window.monacoManager.updateInfo(scriptId, '🔄 Reset to template', 'syntax-info');
-            });
+            // Reset Monaco editor to default template
+            const defaultTemplate = window.monacoManager.getTemplate();
+            window.monacoManager.setValue(defaultTemplate);
+            window.monacoManager.updateInfo('🔄 Reset to template', 'syntax-info');
 
-            console.log('🐍 Monaco editors reset to default templates');
+            console.log('🐍 Monaco editor reset to default template');
         } catch (error) {
-            console.warn('Error resetting Monaco editors:', error);
+            console.warn('Error resetting Monaco editor:', error);
         }
     } else {
-        console.log('📝 Monaco editors not loaded - will use default templates when loaded');
+        console.log('📝 Monaco editor not loaded - will use default template when loaded');
     }
 }
 
@@ -590,7 +559,6 @@ function clearAllHighlights() {
 
 async function resetServerSession() {
     try {
-
         const response = await fetch('/reset_session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
@@ -961,11 +929,9 @@ async function uploadPdf(file) {
 
             showStatus(`PDF loaded successfully! ${totalPages} pages (${result.page_width}×${result.page_height} pts)`, 'success');
             const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
-             if (addAnotherPdfBtn) {
-            addAnotherPdfBtn.style.display = 'inline-flex';
-        }
-
-
+            if (addAnotherPdfBtn) {
+                addAnotherPdfBtn.style.display = 'inline-flex';
+            }
 
             console.log('Server-side extracted data initialized:', result.extracted_data);
         } else {
@@ -1180,7 +1146,6 @@ function updateCoordinateFields(x1, y1, x2, y2) {
     validateField();
 }
 
-//   the validateAndUpdateCoordinates function to maintain precision
 function validateAndUpdateCoordinates() {
     const coordElements = ['pdf_x1', 'pdf_y1', 'pdf_x2', 'pdf_y2'];
     const coords = coordElements.map(id => {
@@ -1200,7 +1165,6 @@ function validateAndUpdateCoordinates() {
     showArea();
 }
 
-//   the updateCoordinatesFromInput function for better precision handling
 function updateCoordinatesFromInput() {
     const coordInput = document.getElementById('coord-input');
     if (!coordInput) return;
@@ -1219,57 +1183,6 @@ function updateCoordinatesFromInput() {
         });
         showArea();
     }
-}
-
-//   even higher precision (3 decimal places)
-function updateCoordinateFieldsHighPrecision(x1, y1, x2, y2) {
-    // Use 3 decimal places for even higher precision
-    const precision = 1000; // For 3 decimal places
-
-    const coordinateFields = {
-        // Individual coordinate fields with 3 decimal places
-        'pdf_x1': Math.round(x1 * precision) / precision,
-        'pdf_y1': Math.round(y1 * precision) / precision,
-        'pdf_x2': Math.round(x2 * precision) / precision,
-        'pdf_y2': Math.round(y2 * precision) / precision,
-
-        // Combined coordinate fields with 3 decimal places
-        'coord-input': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`,
-        'current-coords': `${Math.round(x1 * precision) / precision},${Math.round(y1 * precision) / precision},${Math.round(x2 * precision) / precision},${Math.round(y2 * precision) / precision}`
-    };
-
-    Object.entries(coordinateFields).forEach(([id, value]) => {
-        const element = document.getElementById(id);
-        if (element) element.value = value;
-    });
-
-    hasValidSelection = true;
-    enableExtractionControls(true);
-    updateStepIndicator('select');
-    validateField();
-}
-
-// No rounding version (maximum precision)
-function updateCoordinateFieldsNorounding(x1, y1, x2, y2) {
-    const coordinateFields = {
-        // Keep original precision, no rounding at all
-        'pdf_x1': x1,
-        'pdf_y1': y1,
-        'pdf_x2': x2,
-        'pdf_y2': y2,
-        'coord-input': `${x1},${y1},${x2},${y2}`,
-        'current-coords': `${x1},${y1},${x2},${y2}`
-    };
-
-    Object.entries(coordinateFields).forEach(([id, value]) => {
-        const element = document.getElementById(id);
-        if (element) element.value = value;
-    });
-
-    hasValidSelection = true;
-    enableExtractionControls(true);
-    updateStepIndicator('select');
-    validateField();
 }
 
 function clearSelectionOnly() {
@@ -1671,7 +1584,7 @@ async function exportResults() {
         zoom_level: currentScale,
         image_dimensions: currentImageDimensions,
         pdf_dimensions: pdfDimensions,
-        app: 'OkayDocay Enhanced - Simplified Checkboxes'
+        app: 'OkayDocay Enhanced - Single Validation Script'
     }];
 
     try {
@@ -1686,7 +1599,7 @@ async function exportResults() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `okaydocay_simplified_coordinates_${currentPdf}_export.txt`;
+            a.download = `okaydocay_coordinates_${currentPdf}_export.txt`;
             a.click();
             window.URL.revokeObjectURL(url);
             showStatus('Export completed successfully', 'success');
@@ -2122,7 +2035,7 @@ function getFieldTypeEmoji(type) {
 }
 
 // ================================
-// CONFIG GENERATION WITH SIMPLIFIED STRUCTURE
+// CONFIG GENERATION WITH SINGLE VALIDATION SCRIPT
 // ================================
 
 function showConfigGenerationModal() {
@@ -2140,11 +2053,10 @@ function showConfigGenerationModal() {
     const githubCheckbox = document.getElementById('upload-to-github');
     if (githubCheckbox) githubCheckbox.checked = false;
 
-    const scriptInputs = ['script1', 'script2', 'script3'];
-    scriptInputs.forEach(id => {
-        const textarea = document.getElementById(id);
-        if (textarea) textarea.value = '';
-    });
+    // Initialize Monaco editor for single script
+    if (!window.monacoManager) {
+        window.monacoManager = new SimpleMonacoEditor();
+    }
 
     // Update simplified fields reference
     updateFieldsReference();
@@ -2163,10 +2075,8 @@ async function executeGeneration() {
     const githubCheckbox = document.getElementById('upload-to-github');
     const uploadToGithub = githubCheckbox && githubCheckbox.checked && githubConfigured;
 
-    // Get manual scripts
-    const script1 = window.monacoManager ? window.monacoManager.getValue('script1').trim() : '';
-    const script2 = window.monacoManager ? window.monacoManager.getValue('script2').trim() : '';
-    const script3 = window.monacoManager ? window.monacoManager.getValue('script3').trim() : '';
+    // Get single validation script from Monaco editor
+    const validationScript = window.monacoManager ? window.monacoManager.getValue() : '';
 
     // Show processing state
     const scriptsSection = document.getElementById('scripts-input-section');
@@ -2179,16 +2089,14 @@ async function executeGeneration() {
     const processingStatus = document.getElementById('processing-status');
     if (processingStatus) {
         processingStatus.textContent = uploadToGithub ?
-            'Generating simplified config and uploading to GitHub...' :
-            'Generating simplified configuration package...';
+            'Generating config and uploading to GitHub...' :
+            'Generating configuration package...';
     }
 
     try {
-        // Prepare request data
+        // Prepare request data with single validation script
         const requestData = {
-            script1: script1,
-            script2: script2,
-            script3: script3,
+            validation_script: validationScript,
             upload_to_github: uploadToGithub
         };
 
@@ -2222,7 +2130,7 @@ async function executeGeneration() {
                 const disposition = response.headers.get('Content-Disposition');
                 const filename = disposition ?
                     disposition.split('filename=')[1]?.replace(/"/g, '') :
-                    `simplified_config_package_${Date.now()}.zip`;
+                    `config_package_${Date.now()}.zip`;
 
                 a.download = filename;
                 a.click();
@@ -2232,9 +2140,7 @@ async function executeGeneration() {
                 pendingDownloadData = {
                     blob: blob,
                     filename: filename,
-                    script1: script1,
-                    script2: script2,
-                    script3: script3
+                    validation_script: validationScript
                 };
 
                 showDownloadSuccess();
@@ -2265,7 +2171,7 @@ function showGitHubUploadSuccess(result) {
     if (success) success.classList.remove('hidden');
 
     if (successDetails) {
-        successDetails.textContent = 'Your simplified configuration and scripts have been uploaded to GitHub!';
+        successDetails.textContent = 'Your configuration and validation script have been uploaded to GitHub!';
     }
 
     if (githubSuccessInfo) {
@@ -2273,7 +2179,7 @@ function showGitHubUploadSuccess(result) {
     }
 
     if (githubUploadDetails) {
-        githubUploadDetails.textContent = `Simplified configuration and scripts uploaded to ${githubRepoInfo.owner}/${githubRepoInfo.name}`;
+        githubUploadDetails.textContent = `Configuration and validation script uploaded to ${githubRepoInfo.owner}/${githubRepoInfo.name}`;
     }
 
     if (githubViewLink && result.github_url) {
@@ -2287,7 +2193,7 @@ function showGitHubUploadSuccess(result) {
     // Auto close modal after 5 seconds
     setTimeout(() => {
         closeConfigGenerationModal();
-        showStatus('Simplified configuration package uploaded to GitHub successfully!', 'success');
+        showStatus('Configuration package uploaded to GitHub successfully!', 'success');
     }, 5000);
 }
 
@@ -2302,7 +2208,7 @@ function showDownloadSuccess() {
     if (success) success.classList.remove('hidden');
 
     if (successDetails) {
-        successDetails.textContent = 'Simplified configuration package with your custom scripts has been downloaded.';
+        successDetails.textContent = 'Configuration package with your validation script has been downloaded.';
     }
 
     // Show download actions if GitHub is configured
@@ -2318,7 +2224,7 @@ function showDownloadSuccess() {
     if (!githubConfigured) {
         setTimeout(() => {
             closeConfigGenerationModal();
-            showStatus('Simplified configuration package generated successfully!', 'success');
+            showStatus('Configuration package generated successfully!', 'success');
         }, 3000);
     }
 }
@@ -2338,9 +2244,7 @@ async function uploadToGithubLater() {
 
         // Re-send the generation request with GitHub upload enabled
         const requestData = {
-            script1: pendingDownloadData.script1 || '',
-            script2: pendingDownloadData.script2 || '',
-            script3: pendingDownloadData.script3 || '',
+            validation_script: pendingDownloadData.validation_script || '',
             upload_to_github: true
         };
 
@@ -2417,6 +2321,228 @@ function clearAllFields() {
         }
     }
 }
+
+// ================================
+// SINGLE VALIDATION SCRIPT MONACO EDITOR
+// ================================
+
+class SimpleMonacoEditor {
+    constructor() {
+        this.editor = null;
+        this.isLoaded = false;
+        this.loadMonaco();
+    }
+
+    loadMonaco() {
+        // Add Monaco script if not already loaded
+        if (!window.monaco && !document.getElementById('monaco-loader')) {
+            const script = document.createElement('script');
+            script.id = 'monaco-loader';
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js';
+            script.onload = () => this.initMonaco();
+            document.head.appendChild(script);
+        } else if (window.monaco) {
+            this.initEditor();
+        }
+    }
+
+    initMonaco() {
+        require.config({
+            paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
+        });
+
+        require(['vs/editor/editor.main'], () => {
+            console.log('✅ Monaco Editor loaded');
+            this.initEditor();
+        });
+    }
+
+    initEditor() {
+        const container = document.getElementById('validation-script-editor');
+        if (!container) {
+            console.error('Container not found: validation-script-editor');
+            return;
+        }
+
+        this.editor = monaco.editor.create(container, {
+            value: this.getTemplate(),
+            language: 'python',
+            theme: 'vs-dark',
+            automaticLayout: true,
+            minimap: { enabled: false },
+            fontSize: 13,
+            lineNumbers: 'on',
+            wordWrap: 'on',
+            scrollBeyondLastLine: false
+        });
+
+        this.isLoaded = true;
+        this.updateInfo('Ready 🐍');
+
+        // Add syntax checking
+        this.editor.onDidChangeModelContent(() => {
+            this.debounce(() => this.checkSyntax(), 1000);
+        });
+    }
+
+    getTemplate() {
+        return `# Validation Script - PDF Data Processing
+import json
+
+def process_pdf_data(config):
+    """Process PDF configuration data"""
+    print(f"Processing: {config.get('pdf_name', 'Unknown')}")
+
+    # Your processing logic here
+    for page_num, page_data in config.get('pages', {}).items():
+        fields = page_data.get('fields', [])
+        print(f"Page {page_num}: {len(fields)} fields")
+
+        # Process each field
+        for field in fields:
+            field_name = field['name']
+            field_type = field['type']
+            coordinates = field['coordinates']
+
+            print(f"  - {field_name} ({field_type}): {coordinates}")
+
+            # Handle different field types
+            if field_type == 'checkbox':
+                # Simple checkbox processing - just coordinates
+                coords = coordinates.split(',')
+                x1, y1, x2, y2 = map(float, coords)
+                print(f"    Checkbox area: ({x1}, {y1}) to ({x2}, {y2})")
+
+            elif field_type == 'text':
+                # Text field processing
+                print(f"    Text field for extraction")
+
+            elif field_type == 'signature':
+                # Signature field processing
+                print(f"    Signature field for capture")
+
+    return config
+
+def extract_field_coordinates(config):
+    """Extract field coordinates from config"""
+    fields = []
+
+    for page_num, page_data in config.get('pages', {}).items():
+        for field in page_data.get('fields', []):
+            coords = field['coordinates'].split(',')
+            fields.append({
+                'name': field['name'],
+                'type': field['type'],
+                'page': int(page_num),
+                'x1': float(coords[0]),
+                'y1': float(coords[1]),
+                'x2': float(coords[2]),
+                'y2': float(coords[3])
+            })
+
+    return fields
+
+def generate_form_template(config):
+    """Generate form template from config"""
+    template = {
+        'form_name': config.get('pdf_name', 'form'),
+        'fields': {}
+    }
+
+    for page_num, page_data in config.get('pages', {}).items():
+        for field in page_data.get('fields', []):
+            template['fields'][field['name']] = {
+                'type': field['type'],
+                'page': int(page_num),
+                'coordinates': field['coordinates'],
+                'value': ''
+            }
+
+    return template
+
+# Example usage
+if __name__ == "__main__":
+    # Load and process configuration
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+
+    # Process the PDF data
+    result = process_pdf_data(config)
+
+    # Extract coordinates
+    coordinates = extract_field_coordinates(config)
+
+    # Generate form template
+    template = generate_form_template(config)
+
+    print(f"Processed {len(coordinates)} fields")
+`;
+    }
+
+    checkSyntax() {
+        if (!this.editor) return;
+
+        const code = this.editor.getValue();
+        const lines = code.split('\n');
+        let errors = 0;
+
+        // Simple syntax check
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+                // Check for missing colons
+                if (/^\s*(if|for|while|def|class|try|except|with|elif|else)\s+.*[^:]\s*$/.test(line)) {
+                    errors++;
+                }
+            }
+        });
+
+        if (errors === 0) {
+            this.updateInfo('✅ Syntax OK', 'syntax-valid');
+        } else {
+            this.updateInfo(`❌ ${errors} errors`, 'syntax-error');
+        }
+    }
+
+    formatCode() {
+        if (this.editor) {
+            this.editor.getAction('editor.action.formatDocument').run();
+            this.updateInfo('🔧 Formatted');
+        }
+    }
+
+    getValue() {
+        return this.editor ? this.editor.getValue() : '';
+    }
+
+    setValue(value) {
+        if (this.editor) {
+            this.editor.setValue(value);
+        }
+    }
+
+    updateInfo(message, className = '') {
+        const info = document.getElementById('validation-script-info');
+        if (info) {
+            info.textContent = message;
+            info.className = `editor-info ${className}`;
+        }
+    }
+
+    debounce(func, wait) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(func, wait);
+    }
+}
+
+// Global functions for buttons
+window.formatCode = function() {
+    if (window.monacoManager) window.monacoManager.formatCode();
+};
+
+window.checkSyntax = function() {
+    if (window.monacoManager) window.monacoManager.checkSyntax();
+};
 
 // ================================
 // GLOBAL FUNCTION EXPORTS
@@ -2497,6 +2623,11 @@ document.addEventListener('keydown', function(event) {
         if (modal && !modal.classList.contains('hidden')) {
             closeConfigGenerationModal();
         }
+
+        const resetModal = document.getElementById('reset-confirmation-modal');
+        if (resetModal && !resetModal.classList.contains('hidden')) {
+            hideResetConfirmationModal();
+        }
     }
 
     // Ctrl/Cmd + Enter to generate config (when fields exist)
@@ -2536,7 +2667,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (missingElements.length > 0) {
         console.warn('⚠️ Missing critical elements:', missingElements);
     } else {
-        console.log('✅ All critical elements found - OkayDocay Enhanced with Simplified Checkboxes ready!');
+        console.log('✅ All critical elements found - OkayDocay Enhanced with Single Validation Script ready!');
     }
 
     // Initialize UI state
@@ -2546,7 +2677,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (generateConfigBtn) generateConfigBtn.disabled = true;
     if (clearFieldsBtn) clearFieldsBtn.disabled = true;
 
-    showStatus('Ready! Upload a PDF to begin simplified field configuration.', 'info');
+    showStatus('Ready! Upload a PDF to begin field configuration with single validation script.', 'info');
 });
 
 // ================================
@@ -2554,319 +2685,27 @@ document.addEventListener('DOMContentLoaded', function() {
 // ================================
 
 if (window.performance && window.performance.mark) {
-    window.performance.mark('okaydocay-simplified-script-loaded');
+    window.performance.mark('okaydocay-single-script-loaded');
 
     window.addEventListener('load', function() {
-        window.performance.mark('okaydocay-simplified-app-ready');
+        window.performance.mark('okaydocay-single-script-app-ready');
 
         const loadTime = window.performance.now();
-        console.log(`🚀 OkayDocay Enhanced with Simplified Checkboxes loaded in ${loadTime.toFixed(2)}ms`);
+        console.log(`🚀 OkayDocay Enhanced with Single Validation Script loaded in ${loadTime.toFixed(2)}ms`);
     });
 }
-
-class SimpleMonacoEditor {
-    constructor() {
-        this.editors = {};
-        this.loadMonaco();
-    }
-
-    loadMonaco() {
-        // Add Monaco script if not already loaded
-        if (!window.monaco && !document.getElementById('monaco-loader')) {
-            const script = document.createElement('script');
-            script.id = 'monaco-loader';
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js';
-            script.onload = () => this.initMonaco();
-            document.head.appendChild(script);
-        } else if (window.monaco) {
-            this.initAllEditors();
-        }
-    }
-
-    initMonaco() {
-        require.config({
-            paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
-        });
-
-        require(['vs/editor/editor.main'], () => {
-            console.log('✅ Monaco Editor loaded');
-            this.initAllEditors();
-        });
-    }
-
-    initAllEditors() {
-        this.createEditor('script1', this.getTemplate('script1'));
-        this.createEditor('script2', this.getTemplate('script2'));
-        this.createEditor('script3', this.getTemplate('script3'));
-    }
-
-    createEditor(id, content) {
-        const container = document.getElementById(`${id}-editor`);
-        if (!container) {
-            console.error(`Container not found: ${id}-editor`);
-            return;
-        }
-
-        const editor = monaco.editor.create(container, {
-            value: content,
-            language: 'python',
-            theme: 'vs-dark',
-            automaticLayout: true,
-            minimap: { enabled: false },
-            fontSize: 13,
-            lineNumbers: 'on',
-            wordWrap: 'on',
-            scrollBeyondLastLine: false
-        });
-
-        this.editors[id] = editor;
-        this.updateInfo(id, 'Ready 🐍');
-
-        // Add syntax checking
-        editor.onDidChangeModelContent(() => {
-            this.debounce(() => this.checkSyntax(id), 1000);
-        });
-    }
-
-    getTemplate(id) {
-        const templates = {
-            'script1': `# Script 1 - PDF Data Processing
-import json
-
-def process_pdf_data(config):
-    """Process PDF configuration data"""
-    print(f"Processing: {config.get('pdf_name', 'Unknown')}")
-
-    # Your processing logic here
-    for page_num, page_data in config.get('pages', {}).items():
-        fields = page_data.get('fields', [])
-        print(f"Page {page_num}: {len(fields)} fields")
-
-    return config
-
-# Example usage
-if __name__ == "__main__":
-    with open('config.json', 'r') as f:
-        config = json.load(f)
-    result = process_pdf_data(config)`,
-
-            'script2': `# Script 2 - Field Processing
-import json
-
-def extract_field_coordinates(config):
-    """Extract field coordinates from config"""
-    fields = []
-
-    for page_num, page_data in config.get('pages', {}).items():
-        for field in page_data.get('fields', []):
-            coords = field['coordinates'].split(',')
-            fields.append({
-                'name': field['name'],
-                'type': field['type'],
-                'page': int(page_num),
-                'x1': float(coords[0]),
-                'y1': float(coords[1]),
-                'x2': float(coords[2]),
-                'y2': float(coords[3])
-            })
-
-    return fields`,
-
-            'script3': `# Script 3 - Form Generation
-import json
-
-def generate_form_template(config):
-    """Generate form template from config"""
-    template = {
-        'form_name': config.get('pdf_name', 'form'),
-        'fields': {}
-    }
-
-    for page_num, page_data in config.get('pages', {}).items():
-        for field in page_data.get('fields', []):
-            template['fields'][field['name']] = {
-                'type': field['type'],
-                'page': int(page_num),
-                'coordinates': field['coordinates'],
-                'value': ''
-            }
-
-    return template`
-        };
-        return templates[id] || '# Your Python script here\nimport json\n';
-    }
-
-    checkSyntax(id) {
-        const editor = this.editors[id];
-        if (!editor) return;
-
-        const code = editor.getValue();
-        const lines = code.split('\n');
-        let errors = 0;
-
-        // Simple syntax check
-        lines.forEach(line => {
-            const trimmed = line.trim();
-            if (trimmed && !trimmed.startsWith('#')) {
-                // Check for missing colons
-                if (/^\s*(if|for|while|def|class|try|except|with|elif|else)\s+.*[^:]\s*$/.test(line)) {
-                    errors++;
-                }
-            }
-        });
-
-        if (errors === 0) {
-            this.updateInfo(id, '✅ Syntax OK', 'syntax-valid');
-        } else {
-            this.updateInfo(id, `❌ ${errors} errors`, 'syntax-error');
-        }
-    }
-
-    formatCode(id) {
-        const editor = this.editors[id];
-        if (editor) {
-            editor.getAction('editor.action.formatDocument').run();
-            this.updateInfo(id, '🔧 Formatted');
-        }
-    }
-
-    getValue(id) {
-        const editor = this.editors[id];
-        return editor ? editor.getValue() : '';
-    }
-
-    updateInfo(id, message, className = '') {
-        const info = document.getElementById(`${id}-info`);
-        if (info) {
-            info.textContent = message;
-            info.className = `editor-info ${className}`;
-        }
-    }
-
-    debounce(func, wait) {
-        clearTimeout(this.debounceTimer);
-        this.debounceTimer = setTimeout(func, wait);
-    }
-}
-
-// Global editor manager
-let pythonEditor = null;
-
-// Global functions for buttons
-function formatCode(id) {
-    if (pythonEditor) pythonEditor.formatCode(id);
-}
-
-function checkSyntax(id) {
-    if (pythonEditor) pythonEditor.checkSyntax(id);
-}
-
-// Initialize when modal opens
-const originalShowModal = showConfigGenerationModal;
-showConfigGenerationModal = function() {
-    originalShowModal();
-
-    // Initialize Monaco editor
-    if (!pythonEditor) {
-        pythonEditor = new SimpleMonacoEditor();
-    }
-};
-
-const originalExecuteGeneration = executeGeneration;
-executeGeneration = async function() {
-    const githubCheckbox = document.getElementById('upload-to-github');
-    const uploadToGithub = githubCheckbox && githubCheckbox.checked && githubConfigured;
-
-    // Get scripts from Monaco editors
-    const script1 = pythonEditor ? pythonEditor.getValue('script1') : '';
-    const script2 = pythonEditor ? pythonEditor.getValue('script2') : '';
-    const script3 = pythonEditor ? pythonEditor.getValue('script3') : '';
-
-    // Continue with existing logic...
-    const scriptsSection = document.getElementById('scripts-input-section');
-    const processing = document.getElementById('generation-processing');
-
-    if (scriptsSection) scriptsSection.classList.add('hidden');
-    if (processing) processing.classList.remove('hidden');
-
-    const processingStatus = document.getElementById('processing-status');
-    if (processingStatus) {
-        processingStatus.textContent = uploadToGithub ?
-            'Generating config and uploading to GitHub...' :
-            'Generating configuration package...';
-    }
-
-    try {
-        const requestData = {
-            script1: script1,
-            script2: script2,
-            script3: script3,
-            upload_to_github: uploadToGithub
-        };
-
-        const response = await fetch('/generate_config_json', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestData)
-        });
-
-        if (response.ok) {
-            const contentType = response.headers.get('content-type');
-
-            if (contentType && contentType.includes('application/json')) {
-                const result = await response.json();
-                if (result.uploaded_to_github) {
-                    showGitHubUploadSuccess(result);
-                } else {
-                    throw new Error(result.error || 'Unknown error');
-                }
-            } else {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-
-                const disposition = response.headers.get('Content-Disposition');
-                const filename = disposition ?
-                    disposition.split('filename=')[1]?.replace(/"/g, '') :
-                    `config_package_${Date.now()}.zip`;
-
-                a.download = filename;
-                a.click();
-                window.URL.revokeObjectURL(url);
-
-                pendingDownloadData = {
-                    blob: blob,
-                    filename: filename,
-                    script1: script1,
-                    script2: script2,
-                    script3: script3
-                };
-
-                showDownloadSuccess();
-            }
-        } else {
-            const errorResult = await response.json();
-            throw new Error(errorResult.error || 'Generation failed');
-        }
-
-    } catch (error) {
-        if (processing) processing.classList.add('hidden');
-        showStatus(`Generation failed: ${error.message}`, 'error');
-        if (scriptsSection) scriptsSection.classList.remove('hidden');
-    }
-};
 
 // ================================
 // CONSOLE LOGGING AND DEBUG
 // ================================
 
-console.log('📄 OkayDocay Enhanced with Simplified Checkboxes - JavaScript Loaded');
-console.log('🎯 Features: PDF Upload, Simplified Field Configuration, Manual Script Upload');
+console.log('📄 OkayDocay Enhanced with Single Validation Script - JavaScript Loaded');
+console.log('🎯 Features: PDF Upload, Simplified Field Configuration, Single Script Upload');
 console.log('⚡ Field Types: Text, Signature, Simple Checkbox (Tick Box)');
 console.log('☑️ Checkbox Implementation: Simple tick boxes with coordinates only');
-console.log('🔧 Manual Scripts: Upload 3 custom Python scripts');
+console.log('🔧 Single Script: Upload one validation_script.py');
 console.log('🐙 GitHub Integration: Direct repository uploads');
 console.log('🚀 Ready for simplified PDF processing!');
 
+// Global PDF variable
 let currentPdf = null;

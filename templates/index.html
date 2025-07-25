@@ -189,9 +189,9 @@
             <!-- Manual Scripts Input -->
             <div id="scripts-input-section">
                 <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--gray-700); margin-bottom: 10px;">📝 Custom Python Scripts</h4>
+                    <h4 style="color: var(--gray-700); margin-bottom: 10px;">📝 Custom Python Script</h4>
                     <p style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 15px;">
-                        Add your custom Python scripts that will be included in the simplified configuration package.
+                        Add your custom Python script that will be included in the simplified configuration package.
                     </p>
 
                     <!-- Simplified Fields Reference Panel -->
@@ -219,50 +219,19 @@
                         </div>
                     </div>
 
-                    <!-- Scripts Grid Container -->
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-    <!-- Script 1 -->
-    <div class="script-editor">
-        <label>🐍 Script 1 (script1.py):</label>
-        <div class="editor-wrapper">
-            <div id="script1-editor" class="monaco-editor-container"></div>
-            <div class="editor-toolbar">
-                <button onclick="formatCode('script1')" class="btn-small">🔧 Format</button>
-                <button onclick="checkSyntax('script1')" class="btn-small">✅ Check</button>
-                <span class="editor-info" id="script1-info">Loading editor...</span>
-            </div>
-        </div>
-        <div class="script-info">Optional - Will be saved as script1.py</div>
-    </div>
-
-    <!-- Script 2 -->
-    <div class="script-editor">
-        <label>🐍 Script 2 (script2.py):</label>
-        <div class="editor-wrapper">
-            <div id="script2-editor" class="monaco-editor-container"></div>
-            <div class="editor-toolbar">
-                <button onclick="formatCode('script2')" class="btn-small">🔧 Format</button>
-                <button onclick="checkSyntax('script2')" class="btn-small">✅ Check</button>
-                <span class="editor-info" id="script2-info">Loading editor...</span>
-            </div>
-        </div>
-        <div class="script-info">Optional - Will be saved as script2.py</div>
-    </div>
-
-    <!-- Script 3 -->
-    <div class="script-editor">
-        <label>🐍 Script 3 (script3.py):</label>
-        <div class="editor-wrapper">
-            <div id="script3-editor" class="monaco-editor-container"></div>
-            <div class="editor-toolbar">
-                <button onclick="formatCode('script3')" class="btn-small">🔧 Format</button>
-                <button onclick="checkSyntax('script3')" class="btn-small">✅ Check</button>
-                <span class="editor-info" id="script3-info">Loading editor...</span>
-            </div>
-        </div>
-        <div class="script-info">Optional - Will be saved as script3.py</div>
-    </div>
-</div>
+                    <!-- Single Script Editor -->
+                    <div class="script-editor">
+                        <label>🐍 Validation Script (validation_script.py):</label>
+                        <div class="editor-wrapper">
+                            <div id="validation-script-editor" class="monaco-editor-container"></div>
+                            <div class="editor-toolbar">
+                                <button onclick="formatCode('validation-script')" class="btn-small">🔧 Format</button>
+                                <button onclick="checkSyntax('validation-script')" class="btn-small">✅ Check</button>
+                                <span class="editor-info" id="validation-script-info">Loading editor...</span>
+                            </div>
+                        </div>
+                        <div class="script-info">Combined validation logic - Will be saved as validation_script.py</div>
+                    </div>
 
                 </div>
 

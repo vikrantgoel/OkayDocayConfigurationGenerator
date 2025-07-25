@@ -18,11 +18,9 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 
 # GitHub Configuration
-
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER')
-GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME')
-
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
+GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', 'your-username')
+GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'pdf-configs')
 
 user_sessions = {}
 sessions_lock = threading.Lock()
@@ -275,11 +273,6 @@ def github_config():
 def upload_pdf():
     """Handle PDF file upload with user isolation"""
     try:
-        # Ensure /tmp exists on Windows (acts as a patch)
-        if not os.path.exists("/tmp"):
-            os.makedirs("/tmp")
-
-
         if 'pdf_file' not in request.files:
             return jsonify({'success': False, 'error': 'No file uploaded'})
 
@@ -292,14 +285,9 @@ def upload_pdf():
 
         user_session = get_user_session()
 
-        # ✅ Quick patch for Windows
-        if not os.path.exists("/tmp"):
-            os.makedirs("/tmp")
-
         filename = f"{user_session.session_id}_{str(uuid.uuid4())}.pdf"
         file_path = f"/tmp/{filename}"
         file.save(file_path)
-
         user_session.temp_files.append(file_path)
 
         start_time = time.time()
@@ -613,18 +601,16 @@ def add_field_to_extracted_data():
 
 @app.route('/generate_config_json', methods=['POST'])
 def generate_config_json():
-    """Generate the final configuration JSON with manual scripts and GitHub integration"""
+    """Generate the final configuration JSON with single validation script and GitHub integration"""
     try:
         user_session = get_user_session()
         data = request.get_json()
 
-        # Get manual scripts
-        script1 = data.get('script1', '').strip()
-        script2 = data.get('script2', '').strip()
-        script3 = data.get('script3', '').strip()
+        # Get SINGLE validation script
+        validation_script = data.get('validation_script', '').strip()
         upload_to_github_flag = data.get('upload_to_github', False)
 
-        # Create the simplified config data
+        # Create the config data
         config_data = {
             'pdf_name': user_session.extracted_data['pdf_name'],
             'total_pages': user_session.extracted_data['total_pages'],
@@ -642,7 +628,7 @@ def generate_config_json():
 
         user_session.temp_files.append(config_temp_path)
 
-        # Create ZIP file with config and scripts
+        # Create ZIP file with config and single validation script
         zip_filename = f"{base_name}_complete_package_{int(time.time())}.zip"
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as zip_temp:
@@ -650,18 +636,14 @@ def generate_config_json():
 
         with zipfile.ZipFile(zip_temp_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             # Add config JSON
-            zipf.write(config_temp_path, config_filename)
+            zipf.write(config_temp_path, 'config.json')  # Always named config.json
 
-            # Add manual scripts if provided
-            if script1:
-                zipf.writestr('script1.py', script1)
-            if script2:
-                zipf.writestr('script2.py', script2)
-            if script3:
-                zipf.writestr('script3.py', script3)
+            # Add single validation script if provided
+            if validation_script:
+                zipf.writestr('validation_script.py', validation_script)
 
             # Add README
-            readme_content = create_package_readme(config_data, script1, script2, script3)
+            readme_content = create_package_readme(config_data, validation_script)
             zipf.writestr('README.md', readme_content)
 
         user_session.temp_files.append(zip_temp_path)
@@ -669,41 +651,28 @@ def generate_config_json():
         # Handle GitHub upload if requested
         if upload_to_github_flag and GITHUB_TOKEN:
             try:
-                # Ensure repo exists
+                # Ensure repository exists
                 repo_result = create_github_repo_if_not_exists()
                 if not repo_result['success']:
-                    return jsonify({
-                        'success': False,
-                        'error': f'GitHub setup failed: {repo_result["error"]}'
-                    })
+                    return jsonify({'success': False, 'error': f"GitHub repository setup failed: {repo_result['error']}"})
 
-                # Upload to GitHub
-                generation_type = 'simplified_checkbox_package'
-                github_result = upload_zip_to_github(
-                    zip_temp_path,
-                    user_session.extracted_data['pdf_name'],
-                    generation_type
-                )
+                # Upload ZIP to GitHub
+                upload_result = upload_zip_to_github(zip_temp_path, user_session.extracted_data['pdf_name'], 'simplified_config')
 
-                if github_result['success']:
+                if upload_result['success']:
                     return jsonify({
                         'success': True,
-                        'message': 'Package uploaded to GitHub successfully!',
-                        'github_url': github_result['url'],
-                        'download_url': github_result['download_url'],
-                        'uploaded_to_github': True
+                        'uploaded_to_github': True,
+                        'github_url': upload_result['url'],
+                        'download_url': upload_result['download_url'],
+                        'repository': f"{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}",
+                        'message': f"Simplified configuration package uploaded to GitHub successfully!"
                     })
                 else:
-                    return jsonify({
-                        'success': False,
-                        'error': f'GitHub upload failed: {github_result["error"]}'
-                    })
+                    return jsonify({'success': False, 'error': f"GitHub upload failed: {upload_result['error']}"})
 
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'error': f'GitHub upload error: {str(e)}'
-                })
+            except Exception as github_error:
+                return jsonify({'success': False, 'error': f"GitHub integration error: {str(github_error)}"})
 
         # Return ZIP file for download
         return send_file(zip_temp_path, as_attachment=True, download_name=zip_filename)
@@ -712,16 +681,16 @@ def generate_config_json():
         return jsonify({'success': False, 'error': str(e)})
 
 
-def create_package_readme(config_data, script1, script2, script3):
-    """Create a README file for the simplified package"""
+def create_package_readme(config_data, validation_script):
+    """Create a README file for the simplified package with single script"""
     readme = f"""# PDF Configuration Package - Simplified Checkboxes
 
 Generated by OkayDocay Enhanced on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ## Contents
 
-1. **Configuration JSON** - The PDF field configuration with simplified checkboxes
-2. **Custom Python Scripts** - Your manual scripts for processing
+1. **config.json** - The PDF field configuration with simplified checkboxes
+2. **validation_script.py** - Your custom Python validation script
 3. **README.md** - This file
 
 ## Configuration Details
@@ -764,19 +733,30 @@ Each checkbox field represents a single tickable area on the PDF.
 }}
 ```
 
-## Custom Scripts Included
+## Custom Script Included
 
 """
 
-    if script1:
-        readme += "- **script1.py** - Custom processing script\n"
-    if script2:
-        readme += "- **script2.py** - Custom processing script\n"
-    if script3:
-        readme += "- **script3.py** - Custom processing script\n"
+    if validation_script:
+        readme += """- **validation_script.py** - Your custom validation and processing script
 
-    if not any([script1, script2, script3]):
-        readme += "- No custom scripts were provided\n"
+### Script Usage
+
+Run your custom Python script:
+
+```bash
+python validation_script.py
+```
+
+The script includes combined logic for:
+- PDF data processing
+- Field coordinate extraction  
+- Form template generation
+- Validation logic
+
+"""
+    else:
+        readme += "- No custom script was provided\n"
 
     readme += """
 ## Usage
@@ -784,16 +764,6 @@ Each checkbox field represents a single tickable area on the PDF.
 ### Using the Configuration JSON
 
 The configuration JSON contains all the field definitions and can be used with any PDF processing system that supports field-based form filling.
-
-### Using Custom Scripts
-
-Run your custom Python scripts as needed:
-
-```bash
-python script1.py
-python script2.py  
-python script3.py
-```
 
 ### Example Field Access
 
@@ -809,6 +779,47 @@ for page_num, page_data in config['pages'].items():
     print(f"Page {page_num} fields:")
     for field in page_data['fields']:
         print(f"  - {field['name']} ({field['type']}): {field['coordinates']}")
+
+# Process checkbox fields (simple tick boxes)
+for page_num, page_data in config['pages'].items():
+    for field in page_data['fields']:
+        if field['type'] == 'checkbox':
+            coords = field['coordinates'].split(',')
+            x1, y1, x2, y2 = map(float, coords)
+            print(f"Checkbox '{field['name']}' at ({x1}, {y1}) to ({x2}, {y2})")
+```
+
+### Integration with PDF Libraries
+
+```python
+# Example with PyPDF2 or similar
+import json
+
+def extract_checkbox_values(pdf_path, config_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+
+    # Extract checkbox states from PDF
+    checkbox_values = {}
+
+    for page_num, page_data in config['pages'].items():
+        for field in page_data['fields']:
+            if field['type'] == 'checkbox':
+                # Use coordinates to check if checkbox is ticked
+                coords = field['coordinates'].split(',')
+                # Your checkbox detection logic here
+                checkbox_values[field['name']] = detect_checkbox_state(coords)
+
+    return checkbox_values
+```
+
+## Package Structure
+
+```
+📦 config_package.zip
+├── 📄 config.json              # Field configuration
+├── 🐍 validation_script.py     # Your custom script
+└── 📖 README.md               # This documentation
 ```
 
 Generated by OkayDocay Enhanced - PDF Configuration Maker with Simplified Checkboxes
