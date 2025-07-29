@@ -423,6 +423,8 @@ function resetApplicationForNewPdf() {
     try {
         showLoading('Resetting for new PDF...');
 
+        window.currentConfigName = null;
+
         // 1. Reset PDF-related variables
         currentPdf = null;
         currentPage = 1;
@@ -905,6 +907,21 @@ async function uploadPdf(file) {
         const result = await response.json();
 
         if (result.success) {
+            hideLoading();
+
+            // Prompt for configuration name right after successful upload
+            let configurationName;
+            try {
+                configurationName = await promptConfigurationName(file.name);
+            } catch (error) {
+                showStatus('Configuration name is required to continue', 'error');
+                return;
+            }
+
+            // Store the configuration name globally
+            window.currentConfigName = configurationName;
+
+            // Continue with normal PDF setup
             currentPdf = result.filename;
             totalPages = result.page_count;
             currentPage = 1;
@@ -921,19 +938,19 @@ async function uploadPdf(file) {
             if (coordinateDebug) coordinateDebug.classList.remove('hidden');
 
             currentScale = 1.0;
-            hideLoading();
 
             await loadPage(1);
             enableControls(true);
             updateStepIndicator('navigate');
 
-            showStatus(`PDF loaded successfully! ${totalPages} pages (${result.page_width}×${result.page_height} pts)`, 'success');
+            showStatus(`✅ "${configurationName}" loaded successfully! ${totalPages} pages (${result.page_width}×${result.page_height} pts)`, 'success');
+
             const addAnotherPdfBtn = document.getElementById('add-another-pdf-btn');
             if (addAnotherPdfBtn) {
                 addAnotherPdfBtn.style.display = 'inline-flex';
             }
 
-            console.log('Server-side extracted data initialized:', result.extracted_data);
+            console.log('PDF loaded with configuration name:', configurationName);
         } else {
             hideLoading();
             showStatus(`Upload failed: ${result.error}`, 'error');
@@ -1619,7 +1636,7 @@ function populatePageDropdown() {
     const dropdown = document.getElementById('target-page');
     if (!dropdown) return;
 
-    dropdown.innerHTML = '<option value="">Select page...</option>';
+    dropdown.innerHTML = '';
 
     for (let i = 1; i <= totalPages; i++) {
         const option = document.createElement('option');
@@ -1627,6 +1644,8 @@ function populatePageDropdown() {
         option.textContent = `Page ${i}`;
         dropdown.appendChild(option);
     }
+
+    dropdown.value = "1"; //
 }
 
 function handlePageSelection() {
@@ -2071,9 +2090,13 @@ function closeConfigGenerationModal() {
     pendingDownloadData = null;
 }
 
+// REPLACE THE EXISTING executeGeneration FUNCTION WITH THIS
 async function executeGeneration() {
     const githubCheckbox = document.getElementById('upload-to-github');
     const uploadToGithub = githubCheckbox && githubCheckbox.checked && githubConfigured;
+
+    // Use the stored configuration name from PDF upload
+    const configName = window.currentConfigName || 'Configuration';
 
     // Get single validation script from Monaco editor
     const validationScript = window.monacoManager ? window.monacoManager.getValue() : '';
@@ -2089,13 +2112,14 @@ async function executeGeneration() {
     const processingStatus = document.getElementById('processing-status');
     if (processingStatus) {
         processingStatus.textContent = uploadToGithub ?
-            'Generating config and uploading to GitHub...' :
-            'Generating configuration package...';
+            `Generating "${configName}" and uploading to GitHub...` :
+            `Generating "${configName}" configuration package...`;
     }
 
     try {
-        // Prepare request data with single validation script
+        // Prepare request data with stored config name
         const requestData = {
+            config_name: configName,
             validation_script: validationScript,
             upload_to_github: uploadToGithub
         };
@@ -2115,7 +2139,7 @@ async function executeGeneration() {
                 const result = await response.json();
 
                 if (result.uploaded_to_github) {
-                    showGitHubUploadSuccess(result);
+                    showGitHubUploadSuccess(result, configName);
                 } else {
                     throw new Error(result.error || 'Unknown error');
                 }
@@ -2126,24 +2150,23 @@ async function executeGeneration() {
                 const a = document.createElement('a');
                 a.href = url;
 
-                // Get filename from response headers
-                const disposition = response.headers.get('Content-Disposition');
-                const filename = disposition ?
-                    disposition.split('filename=')[1]?.replace(/"/g, '') :
-                    `config_package_${Date.now()}.zip`;
+                // Use the stored config name for filename
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, '-');
+                const safeConfigName = configName.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_');
+                a.download = `${safeConfigName}_${timestamp}.zip`;
 
-                a.download = filename;
                 a.click();
                 window.URL.revokeObjectURL(url);
 
                 // Store download data for potential GitHub upload later
                 pendingDownloadData = {
                     blob: blob,
-                    filename: filename,
+                    filename: a.download,
+                    config_name: configName,
                     validation_script: validationScript
                 };
 
-                showDownloadSuccess();
+                showDownloadSuccess(configName);
             }
 
         } else {
@@ -2152,12 +2175,15 @@ async function executeGeneration() {
         }
 
     } catch (error) {
+        const processing = document.getElementById('generation-processing');
+        const scriptsSection = document.getElementById('scripts-input-section');
+
         if (processing) processing.classList.add('hidden');
-        showStatus(`Generation failed: ${error.message}`, 'error');
         if (scriptsSection) scriptsSection.classList.remove('hidden');
+
+        showStatus(`Generation failed: ${error.message}`, 'error');
     }
 }
-
 function showGitHubUploadSuccess(result) {
     const processing = document.getElementById('generation-processing');
     const success = document.getElementById('generation-success');
@@ -2321,6 +2347,28 @@ function clearAllFields() {
         }
     }
 }
+
+
+//function to sync field removal with server
+async function removeFieldFromServer(fieldName) {
+    try {
+        const response = await fetch('/remove_field_from_extracted_data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field_name: fieldName })
+        });
+        const result = await response.json();
+        if (result.success) {
+            return result.extracted_data;
+        }
+        throw new Error(result.error || 'Failed to remove field from server');
+    } catch (error) {
+        console.error('Error removing field from server:', error);
+        return null;
+    }
+}
+
+
 
 // ================================
 // SINGLE VALIDATION SCRIPT MONACO EDITOR
@@ -2551,20 +2599,119 @@ window.checkSyntax = function() {
 // Make copyFieldName globally accessible
 window.copyFieldName = copyFieldName;
 
-window.removeField = function(fieldName) {
-    fieldDefinitions = fieldDefinitions.filter(f => f.name !== fieldName);
-    updateFieldsList();
-    updateFieldsReference();
-    showStatus(`Field "${fieldName}" removed`, 'info');
+window.removeField = async function(fieldName) {
+    try {
+        // Remove from client-side array
+        fieldDefinitions = fieldDefinitions.filter(f => f.name !== fieldName);
 
-    if (fieldDefinitions.length === 0) {
-        const clearFieldsBtn = document.getElementById('clear-fields-btn');
-        const generateConfigBtn = document.getElementById('generate-config-btn');
+        // Remove from server-side data
+        await removeFieldFromServer(fieldName);
 
-        if (clearFieldsBtn) clearFieldsBtn.disabled = true;
-        if (generateConfigBtn) generateConfigBtn.disabled = true;
+        // Update UI
+        updateFieldsList();
+        updateFieldsReference();
+        showStatus(`Field "${fieldName}" removed`, 'info');
+
+        if (fieldDefinitions.length === 0) {
+            const clearFieldsBtn = document.getElementById('clear-fields-btn');
+            const generateConfigBtn = document.getElementById('generate-config-btn');
+
+            if (clearFieldsBtn) clearFieldsBtn.disabled = true;
+            if (generateConfigBtn) generateConfigBtn.disabled = true;
+        }
+    } catch (error) {
+        showStatus(`Error removing field: ${error.message}`, 'error');
+        console.error('Remove field error:', error);
     }
 };
+
+//function to prompt for configuration name after PDF upload
+function promptConfigurationName(pdfFileName) {
+    return new Promise((resolve, reject) => {
+        // Create simple prompt modal
+        const modalHTML = `
+            <div id="config-name-modal" class="modal" style="z-index: 1060;">
+                <div class="modal-content" style="max-width: 450px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📝</div>
+                        <h3 style="color: var(--primary); margin: 0;">Name Your Configuration</h3>
+                        <p style="color: var(--gray-600); font-size: 0.875rem; margin: 8px 0 0 0;">Give this PDF configuration a descriptive name</p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <input
+                            type="text"
+                            id="config-name-input"
+                            placeholder="e.g., Invoice Form, Registration Form"
+                            style="width: 100%; padding: 12px; border: 2px solid var(--primary-200); border-radius: 8px; font-size: 14px; background: var(--primary-25); text-align: center; font-weight: 500;"
+                            maxlength="60"
+                        >
+                        <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 6px; text-align: center;">
+                            💡 Keep it simple and descriptive (max 10 words)
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button id="config-name-confirm" class="btn primary" style="flex: 1; max-width: 140px;">
+                            ✅ Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+
+   // Add modal to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const modal = document.getElementById('config-name-modal');
+        const input = document.getElementById('config-name-input');
+        const confirmBtn = document.getElementById('config-name-confirm');
+
+        // Auto-suggest name based on PDF filename
+        const baseName = pdfFileName.replace('.pdf', '').replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
+        input.value = `${baseName} Configuration`;
+        input.focus();
+        input.select();
+
+        function cleanup() {
+            if (modal && modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        }
+
+        function handleConfirm() {
+            const configName = input.value.trim();
+            if (configName) {
+                cleanup();
+                resolve(configName);
+            } else {
+                input.style.borderColor = 'var(--danger)';
+                input.focus();
+            }
+        }
+
+        // Event listeners
+        confirmBtn.addEventListener('click', handleConfirm);
+
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleConfirm();
+            }
+        });
+
+        input.addEventListener('input', function() {
+            input.style.borderColor = 'var(--primary-200)';
+        });
+
+        // Prevent closing modal - user must provide name
+        modal.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+}
+
+
 
 window.editField = function(fieldName) {
     const field = fieldDefinitions.find(f => f.name === fieldName);
