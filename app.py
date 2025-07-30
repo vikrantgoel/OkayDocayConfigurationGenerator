@@ -1,3 +1,10 @@
+from dotenv import load_dotenv
+
+
+
+load_dotenv()
+
+
 from flask import Flask, request, jsonify, render_template, send_file, session
 import pdfplumber
 import io
@@ -13,9 +20,14 @@ import requests
 from datetime import datetime, timedelta
 import atexit
 
+
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
+
+
+
 
 # GitHub Configuration
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')

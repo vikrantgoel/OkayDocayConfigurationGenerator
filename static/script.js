@@ -55,6 +55,80 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ OkayDocay Enhanced with Single Validation Script - Ready!');
 });
 
+
+function updateMonacoWithGeneratedScript() {
+    if (window.monacoManager && window.monacoManager.isLoaded) {
+        const generatedScript = generateValidationScript();
+        window.monacoManager.setValue(generatedScript);
+        window.monacoManager.updateInfo('🤖 Auto-generated based on your fields', 'syntax-valid');
+        console.log('✅ Validation script auto-generated based on configured fields');
+    }
+}
+
+// Add button to regenerate script
+function addRegenerateButton() {
+    // Add this to your modal or wherever appropriate
+    const regenerateBtn = document.createElement('button');
+    regenerateBtn.textContent = '🤖 Auto-Generate Script';
+    regenerateBtn.className = 'btn primary';
+    regenerateBtn.style.marginBottom = '10px';
+    regenerateBtn.onclick = function() {
+        updateMonacoWithGeneratedScript();
+        showStatus('✅ Validation script auto-generated based on your fields!', 'success');
+    };
+
+    // Insert before the Monaco editor
+    const editorContainer = document.getElementById('validation-script-editor');
+    if (editorContainer && editorContainer.parentNode) {
+        editorContainer.parentNode.insertBefore(regenerateBtn, editorContainer);
+    }
+}
+
+// Auto-generate script whenever fields are added
+function addSimplifiedField() {
+    const fieldNameInput = document.getElementById('field-name');
+    const fieldTypeSelect = document.getElementById('field-type');
+    const targetPageSelect = document.getElementById('target-page');
+    const currentCoordsInput = document.getElementById('current-coords');
+
+    if (!fieldNameInput || !fieldTypeSelect || !targetPageSelect || !currentCoordsInput) return;
+
+    const fieldName = fieldNameInput.value.trim();
+    const fieldType = fieldTypeSelect.value;
+    const targetPage = parseInt(targetPageSelect.value);
+    const coordinates = currentCoordsInput.value;
+
+    if (!fieldName || !coordinates || !targetPage) {
+        showStatus('Please fill all required fields', 'error');
+        return;
+    }
+
+    const existingField = fieldDefinitions.find(f => f.name === fieldName);
+    if (existingField) {
+        showStatus(`Field "${fieldName}" already exists`, 'warning');
+        return;
+    }
+
+    // Create simplified field object
+    const field = {
+        name: fieldName,
+        type: fieldType,
+        coordinates: coordinates,
+        page: targetPage,
+        created_at: new Date().toISOString()
+    };
+
+    addFieldToDefinitions(field);
+
+    // AUTO-REGENERATE the validation script after adding field
+    setTimeout(() => {
+        if (fieldDefinitions.length > 0) {
+            updateMonacoWithGeneratedScript();
+            console.log(`🤖 Auto-regenerated validation script after adding ${fieldType} field: ${fieldName}`);
+        }
+    }, 500);
+}
+
 function initializeDOMReferences() {
     // Main UI elements
     uploadArea = document.getElementById('upload-area');
@@ -1821,6 +1895,20 @@ function addFieldToDefinitions(field) {
 
     if (clearFieldsBtn) clearFieldsBtn.disabled = false;
     if (generateConfigBtn) generateConfigBtn.disabled = false;
+
+    // AUTO-REGENERATE validation script
+    setTimeout(() => {
+        if (window.monacoManager && window.monacoManager.isLoaded) {
+            const currentScript = window.monacoManager.getValue();
+            const defaultTemplate = getDefaultValidationTemplate();
+
+            // Only auto-regenerate if user hasn't made custom changes
+            if (currentScript === defaultTemplate || currentScript.includes('# Default template')) {
+                window.monacoManager.regenerateFromFields();
+                console.log(`🤖 Auto-regenerated validation script after adding ${field.type}: ${field.name}`);
+            }
+        }
+    }, 500);
 }
 
 function updateFieldsList() {
@@ -2077,12 +2165,52 @@ function showConfigGenerationModal() {
         window.monacoManager = new SimpleMonacoEditor();
     }
 
+    // AUTO-GENERATE script based on current fields
+    setTimeout(() => {
+        if (window.monacoManager && window.monacoManager.isLoaded && fieldDefinitions.length > 0) {
+            window.monacoManager.regenerateFromFields();
+            showStatus('🤖 Validation script auto-generated based on your fields!', 'success');
+        }
+    }, 1000);
+
     // Update simplified fields reference
     updateFieldsReference();
     setupReferencePanel();
+    addAutoGenerateButton();
 
     handleGitHubOptionChange();
 }
+function addAutoGenerateButton() {
+    // Check if button already exists
+    if (document.getElementById('auto-generate-btn')) return;
+
+    const editorWrapper = document.querySelector('.editor-wrapper');
+    if (!editorWrapper) return;
+
+    // Create auto-generate button
+    const autoGenBtn = document.createElement('button');
+    autoGenBtn.id = 'auto-generate-btn';
+    autoGenBtn.className = 'btn primary';
+    autoGenBtn.style.marginBottom = '10px';
+    autoGenBtn.style.width = '100%';
+    autoGenBtn.innerHTML = '🤖 Auto-Generate Validation Script';
+
+    autoGenBtn.onclick = function() {
+        if (fieldDefinitions.length === 0) {
+            showStatus('⚠️ Add some fields first, then auto-generate the script', 'warning');
+            return;
+        }
+
+        if (window.monacoManager && window.monacoManager.isLoaded) {
+            window.monacoManager.regenerateFromFields();
+            showStatus('✅ Validation script auto-generated based on your fields!', 'success');
+        }
+    };
+
+    // Insert before editor wrapper
+    editorWrapper.parentNode.insertBefore(autoGenBtn, editorWrapper);
+}
+
 
 function closeConfigGenerationModal() {
     const modal = document.getElementById('config-generation-modal');
@@ -2434,98 +2562,31 @@ class SimpleMonacoEditor {
     }
 
     getTemplate() {
-        return `# Validation Script - PDF Data Processing
-import json
-
-def process_pdf_data(config):
-    """Process PDF configuration data"""
-    print(f"Processing: {config.get('pdf_name', 'Unknown')}")
-
-    # Your processing logic here
-    for page_num, page_data in config.get('pages', {}).items():
-        fields = page_data.get('fields', [])
-        print(f"Page {page_num}: {len(fields)} fields")
-
-        # Process each field
-        for field in fields:
-            field_name = field['name']
-            field_type = field['type']
-            coordinates = field['coordinates']
-
-            print(f"  - {field_name} ({field_type}): {coordinates}")
-
-            # Handle different field types
-            if field_type == 'checkbox':
-                # Simple checkbox processing - just coordinates
-                coords = coordinates.split(',')
-                x1, y1, x2, y2 = map(float, coords)
-                print(f"    Checkbox area: ({x1}, {y1}) to ({x2}, {y2})")
-
-            elif field_type == 'text':
-                # Text field processing
-                print(f"    Text field for extraction")
-
-            elif field_type == 'signature':
-                # Signature field processing
-                print(f"    Signature field for capture")
-
-    return config
-
-def extract_field_coordinates(config):
-    """Extract field coordinates from config"""
-    fields = []
-
-    for page_num, page_data in config.get('pages', {}).items():
-        for field in page_data.get('fields', []):
-            coords = field['coordinates'].split(',')
-            fields.append({
-                'name': field['name'],
-                'type': field['type'],
-                'page': int(page_num),
-                'x1': float(coords[0]),
-                'y1': float(coords[1]),
-                'x2': float(coords[2]),
-                'y2': float(coords[3])
-            })
-
-    return fields
-
-def generate_form_template(config):
-    """Generate form template from config"""
-    template = {
-        'form_name': config.get('pdf_name', 'form'),
-        'fields': {}
+        // Use auto-generated template instead of static one
+        return generateValidationScript();
     }
 
-    for page_num, page_data in config.get('pages', {}).items():
-        for field in page_data.get('fields', []):
-            template['fields'][field['name']] = {
-                'type': field['type'],
-                'page': int(page_num),
-                'coordinates': field['coordinates'],
-                'value': ''
-            }
-
-    return template
-
-# Example usage
-if __name__ == "__main__":
-    # Load and process configuration
-    with open('config.json', 'r') as f:
-        config = json.load(f)
-
-    # Process the PDF data
-    result = process_pdf_data(config)
-
-    # Extract coordinates
-    coordinates = extract_field_coordinates(config)
-
-    # Generate form template
-    template = generate_form_template(config)
-
-    print(f"Processed {len(coordinates)} fields")
-`;
+    setValue(value) {
+        if (this.editor) {
+            this.editor.setValue(value);
+        }
     }
+
+    getValue() {
+        return this.editor ? this.editor.getValue() : '';
+     }
+
+
+    regenerateFromFields() {
+        if (this.isLoaded) {
+            const newScript = generateValidationScript();
+            this.setValue(newScript);
+            this.updateInfo('🤖 Auto-generated from your fields', 'syntax-valid');
+        }
+    }
+
+
+
 
     checkSyntax() {
         if (!this.editor) return;
@@ -2559,15 +2620,9 @@ if __name__ == "__main__":
         }
     }
 
-    getValue() {
-        return this.editor ? this.editor.getValue() : '';
-    }
 
-    setValue(value) {
-        if (this.editor) {
-            this.editor.setValue(value);
-        }
-    }
+
+
 
     updateInfo(message, className = '') {
         const info = document.getElementById('validation-script-info');
@@ -2709,6 +2764,93 @@ function promptConfigurationName(pdfFileName) {
             e.stopPropagation();
         });
     });
+}
+
+
+// Script Generation
+
+function generateValidationScript() {
+    if (fieldDefinitions.length === 0) {
+        return getDefaultValidationTemplate();
+    }
+
+    // Collect all field names by type
+    const textFields = [];
+    const checkboxFields = [];
+    const signatureFields = [];
+
+    fieldDefinitions.forEach(field => {
+        switch(field.type) {
+            case 'text':
+                textFields.push(field.name);
+                break;
+            case 'checkbox':
+                checkboxFields.push(field.name);
+                break;
+            case 'signature':
+                signatureFields.push(field.name);
+                break;
+        }
+    });
+
+    // Generate the simple script following your exact pattern
+    let script = `# Validation Script - PDF Data Processing
+`;
+
+    // Generate form_variables array
+    const allFields = [...textFields, ...checkboxFields, ...signatureFields];
+    script += `form_variables = ${JSON.stringify(allFields)}\n\n`;
+
+    script += `# Get expected values from dropdowns\n`;
+    script += `expected_values = {}\n\n`;
+
+    // Generate text field assignments (simple pattern)
+    textFields.forEach(fieldName => {
+        script += `# Text field - user types ${fieldName}\n`;
+        script += `expected_values['${fieldName}'] = input_data.get('${fieldName}', '')\n\n`;
+    });
+
+    // Generate checkbox field logic (your exact pattern)
+    checkboxFields.forEach(fieldName => {
+        script += `# Checkbox field - user selects from dropdown\n`;
+        script += `${fieldName}_selection = input_data.get('${fieldName}', '')\n`;
+        script += `if ${fieldName}_selection == 'checked':\n`;
+        script += `    expected_values['${fieldName}'] = 'checked'\n`;
+        script += `else:\n`;
+        script += `    expected_values['${fieldName}'] = 'unchecked'\n\n`;
+    });
+
+    // Generate signature field logic (your exact pattern)
+    signatureFields.forEach(fieldName => {
+        script += `# Signature field - user selects from dropdown\n`;
+        script += `${fieldName}_selection = input_data.get('${fieldName}', '')\n`;
+        script += `if ${fieldName}_selection == 'signed':\n`;
+        script += `    expected_values['${fieldName}'] = 'signed'\n`;
+        script += `else:\n`;
+        script += `    expected_values['${fieldName}'] = 'blank'\n\n`;
+    });
+
+    // Add simple validation warnings for text fields only (like your example)
+    if (textFields.length > 0) {
+        textFields.forEach(fieldName => {
+            script += `if not expected_values['${fieldName}'].strip():\n`;
+            script += `    print(f"Warning: ${fieldName} is empty")\n\n`;
+        });
+    }
+
+    return script;
+}
+
+function getDefaultValidationTemplate() {
+    return `# Validation Script - PDF Data Processing
+form_variables = []  # Add your fields first to auto-generate
+
+# Get expected values from dropdowns
+expected_values = {}
+
+# Configure your PDF fields first, then auto-generate this script
+print("Add text, checkbox, and signature fields to auto-generate validation code")
+`;
 }
 
 
